@@ -9,6 +9,7 @@ import { StatsPage } from './pages/Stats';
 import { BooksPage, BookDetailPage } from './pages/Books';
 import { FlashcardsPage } from './pages/Flashcards';
 import { SettingsPage } from './pages/Settings';
+import { DashboardPage } from './pages/Dashboard';
 import { PopupDictPage } from './pages/PopupDict';
 import { PopupTranslatePage } from './pages/PopupTranslate';
 import { api } from './ipc';
@@ -57,6 +58,7 @@ export default function App() {
                   <Route path="/books/:id" element={<BookDetailPage />} />
                   <Route path="/books/:id/flashcards" element={<FlashcardsPage />} />
                   <Route path="/stats" element={<StatsPage />} />
+                  <Route path="/dashboard" element={<DashboardPage />} />
                   <Route path="/settings/*" element={<SettingsPage />} />
                   <Route path="/" element={<Navigate to="/dictionary" replace />} />
                 </Routes>

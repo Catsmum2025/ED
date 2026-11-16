@@ -2,6 +2,9 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ──────────────────────────────────────────────────────────────
+   Design tokens
+   ────────────────────────────────────────────────────────────── */
 :root {
   --accent: #2563eb;
   --accent-hover: #1d4ed8;
@@ -12,6 +15,12 @@
   --shadow-card: 0 1px 2px rgba(15, 23, 42, 0.04), 0 2px 8px rgba(15, 23, 42, 0.05);
   --shadow-hover: 0 6px 24px rgba(15, 23, 42, 0.1);
   --shadow-soft: 0 1px 2px rgba(15, 23, 42, 0.05);
+  --shadow-rail: 0 1px 2px rgba(15, 23, 42, 0.04), 0 12px 32px -12px rgba(15, 23, 42, 0.18);
+
+  /* Rail geometry */
+  --nav-inset: 1rem;
+  --nav-w: 4rem;
+  --app-gutter: 1.5rem;
 }
 .dark {
   --cell-empty: #1e293b;
@@ -19,8 +28,63 @@
   --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.4), 0 2px 10px rgba(0, 0, 0, 0.35);
   --shadow-hover: 0 8px 30px rgba(0, 0, 0, 0.55);
   --shadow-soft: 0 1px 2px rgba(0, 0, 0, 0.5);
+  --shadow-rail: 0 1px 2px rgba(0, 0, 0, 0.5), 0 16px 40px -16px rgba(0, 0, 0, 0.8);
 }
 
+/* ──────────────────────────────────────────────────────────────
+   Motion tokens — three global intensity levels.
+   Set as data-motion on <html> by SettingsLoader / Layout.
+   ────────────────────────────────────────────────────────────── */
+:root,
+html[data-motion='lively'] {
+  --dur-fast: 140ms;
+  --dur: 240ms;
+  --dur-slow: 380ms;
+  --ease: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --lift: -3px;
+  --page-shift: 10px;
+  --page-scale: 1;
+  --glyph-scale: 1.08;
+  --glyph-rotate: -6deg;
+  --glyph-lift: -1px;
+  --stagger: 30ms;
+  --tip-shift: -6px;
+}
+html[data-motion='calm'] {
+  --dur-fast: 90ms;
+  --dur: 150ms;
+  --dur-slow: 200ms;
+  --ease: cubic-bezier(0.33, 0, 0.2, 1);
+  --ease-spring: cubic-bezier(0.33, 0, 0.2, 1);
+  --lift: -1px;
+  --page-shift: 4px;
+  --page-scale: 1;
+  --glyph-scale: 1.03;
+  --glyph-rotate: 0deg;
+  --glyph-lift: 0px;
+  --stagger: 0ms;
+  --tip-shift: -4px;
+}
+html[data-motion='performance'] {
+  --dur-fast: 1ms;
+  --dur: 1ms;
+  --dur-slow: 1ms;
+  --ease: linear;
+  --ease-spring: linear;
+  --lift: 0px;
+  --page-shift: 0px;
+  --page-scale: 1;
+  --glyph-scale: 1;
+  --glyph-rotate: 0deg;
+  --glyph-lift: 0px;
+  --stagger: 0ms;
+  --tip-shift: 0px;
+}
+
+/* ──────────────────────────────────────────────────────────────
+   Base
+   ────────────────────────────────────────────────────────────── */
 * {
   box-sizing: border-box;
 }
@@ -45,9 +109,21 @@ body {
   color: #f8fafc;
 }
 
+/* App canvas: accent-tinted ambient glow over a soft vertical gradient. */
 .app-bg {
-  background: var(--bg-grad);
+  background-color: #f6f8fc;
+  background-image:
+    radial-gradient(900px 520px at 10% -10%, color-mix(in srgb, var(--accent) 10%, transparent), transparent 65%),
+    radial-gradient(720px 460px at 100% 0%, color-mix(in srgb, var(--accent) 5%, transparent), transparent 62%),
+    linear-gradient(180deg, #fbfcfe 0%, #eef2f7 100%);
   background-attachment: fixed;
+}
+.dark .app-bg {
+  background-color: #020617;
+  background-image:
+    radial-gradient(900px 520px at 10% -10%, color-mix(in srgb, var(--accent) 20%, transparent), transparent 65%),
+    radial-gradient(720px 460px at 100% 0%, color-mix(in srgb, #6366f1 9%, transparent), transparent 62%),
+    linear-gradient(180deg, #0b1224 0%, #020617 100%);
 }
 
 .font-serif-display {
@@ -55,15 +131,9 @@ body {
   letter-spacing: -0.01em;
 }
 
-.shadow-card {
-  box-shadow: var(--shadow-card);
-}
-.shadow-hover {
-  box-shadow: var(--shadow-hover);
-}
-.shadow-soft {
-  box-shadow: var(--shadow-soft);
-}
+.shadow-card { box-shadow: var(--shadow-card); }
+.shadow-hover { box-shadow: var(--shadow-hover); }
+.shadow-soft { box-shadow: var(--shadow-soft); }
 
 ::selection {
   background: color-mix(in srgb, var(--accent) 22%, transparent);
@@ -94,30 +164,281 @@ body {
   border: 2px solid transparent;
 }
 
-/* Animations */
+/* ──────────────────────────────────────────────────────────────
+   Global shell: fixed vertical rail + content column
+   ────────────────────────────────────────────────────────────── */
+.app-main {
+  padding-left: calc(var(--nav-inset) + var(--nav-w) + 1.25rem);
+  padding-right: var(--app-gutter);
+  padding-top: 1.75rem;
+  padding-bottom: 2.5rem;
+}
+
+/* ──────────────────────────────────────────────────────────────
+   Navigation rail
+   ────────────────────────────────────────────────────────────── */
+.nav-rail {
+  position: fixed;
+  left: var(--nav-inset);
+  top: var(--nav-inset);
+  bottom: var(--nav-inset);
+  width: var(--nav-w);
+  z-index: 40;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 0.7rem 0;
+  border-radius: 1.75rem;
+  background: color-mix(in srgb, #ffffff 84%, transparent);
+  border: 1px solid rgba(148, 163, 184, 0.16);
+  box-shadow: var(--shadow-rail);
+  backdrop-filter: blur(20px) saturate(160%);
+  -webkit-backdrop-filter: blur(20px) saturate(160%);
+  transition: border-color var(--dur) var(--ease), box-shadow var(--dur) var(--ease);
+}
+.dark .nav-rail {
+  background: color-mix(in srgb, #0f172a 68%, transparent);
+  border-color: rgba(148, 163, 184, 0.12);
+}
+
+.rail-btn {
+  position: relative;
+  width: 2.75rem;
+  height: 2.75rem;
+  display: grid;
+  place-items: center;
+  border-radius: 0.9rem;
+  color: #64748b;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  outline: none;
+  transition:
+    color var(--dur-fast) var(--ease),
+    background-color var(--dur-fast) var(--ease),
+    transform var(--dur-fast) var(--ease-spring);
+}
+.dark .rail-btn { color: #94a3b8; }
+.rail-btn:hover {
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 9%, transparent);
+}
+.rail-btn:active { transform: scale(0.93); }
+.rail-btn.is-active {
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 13%, transparent);
+}
+.rail-btn:focus-visible {
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 55%, transparent);
+}
+
+.rail-glyph {
+  display: inline-flex;
+  transition: transform var(--dur) var(--ease-spring);
+}
+.rail-btn:hover .rail-glyph {
+  transform: translateY(var(--glyph-lift)) scale(var(--glyph-scale)) rotate(var(--glyph-rotate));
+}
+.rail-btn.is-active .rail-glyph { transform: none; }
+
+/* Active marker: a small accent pill glued to the rail's inner edge. */
+.rail-indicator {
+  position: absolute;
+  left: -0.45rem;
+  top: 50%;
+  width: 3px;
+  height: 1.15rem;
+  border-radius: 999px;
+  background: var(--accent);
+  opacity: 0;
+  transform: translateY(-50%) scaleY(0.25);
+  transition:
+    opacity var(--dur-fast) var(--ease),
+    transform var(--dur) var(--ease-spring);
+}
+.rail-btn.is-active .rail-indicator {
+  opacity: 1;
+  transform: translateY(-50%) scaleY(1);
+}
+
+/* "Coming soon" hint dot on the global dashboard entry. */
+.rail-dot {
+  position: absolute;
+  top: 0.55rem;
+  right: 0.55rem;
+  width: 5px;
+  height: 5px;
+  border-radius: 999px;
+  background: var(--accent);
+  box-shadow: 0 0 0 2px color-mix(in srgb, #ffffff 90%, transparent);
+}
+.dark .rail-dot {
+  box-shadow: 0 0 0 2px color-mix(in srgb, #0f172a 90%, transparent);
+}
+
+/* Tooltip that slides out of the rail. */
+.rail-tip {
+  position: absolute;
+  left: calc(100% + 1.1rem);
+  top: 50%;
+  z-index: 50;
+  white-space: nowrap;
+  font-size: 0.75rem;
+  font-weight: 500;
+  line-height: 1;
+  letter-spacing: 0.01em;
+  padding: 0.45rem 0.65rem;
+  border-radius: 0.55rem;
+  background: rgba(15, 23, 42, 0.92);
+  color: #f8fafc;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.18);
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(-50%) translateX(var(--tip-shift));
+  transition:
+    opacity var(--dur-fast) var(--ease),
+    transform var(--dur-fast) var(--ease);
+}
+.dark .rail-tip {
+  background: rgba(248, 250, 252, 0.95);
+  color: #0f172a;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+}
+.rail-btn:hover .rail-tip,
+.rail-btn:focus-visible .rail-tip {
+  opacity: 1;
+  transform: translateY(-50%) translateX(0);
+}
+
+.rail-divider {
+  width: 1.75rem;
+  height: 1px;
+  margin: 0.45rem auto 0.35rem;
+  background: color-mix(in srgb, #94a3b8 35%, transparent);
+}
+.dark .rail-divider { background: rgba(148, 163, 184, 0.22); }
+
+/* ──────────────────────────────────────────────────────────────
+   Settings secondary menu
+   ────────────────────────────────────────────────────────────── */
+.side-link {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.55rem 0.7rem 0.55rem 0.85rem;
+  border-radius: 0.7rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #64748b;
+  outline: none;
+  transition:
+    color var(--dur-fast) var(--ease),
+    background-color var(--dur-fast) var(--ease);
+}
+.dark .side-link { color: #94a3b8; }
+.side-link:hover {
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 7%, transparent);
+}
+.side-link.is-active {
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 11%, transparent);
+}
+.side-link::before {
+  content: '';
+  position: absolute;
+  left: 0.15rem;
+  top: 50%;
+  width: 3px;
+  height: 1rem;
+  border-radius: 999px;
+  background: var(--accent);
+  opacity: 0;
+  transform: translateY(-50%) scaleY(0.3);
+  transition:
+    opacity var(--dur-fast) var(--ease),
+    transform var(--dur) var(--ease-spring);
+}
+.side-link.is-active::before {
+  opacity: 1;
+  transform: translateY(-50%) scaleY(1);
+}
+.side-glyph {
+  display: inline-flex;
+  transition: transform var(--dur) var(--ease-spring);
+}
+.side-link:hover .side-glyph {
+  transform: scale(var(--glyph-scale)) rotate(var(--glyph-rotate));
+}
+.side-link.is-active .side-glyph { transform: none; }
+
+/* ──────────────────────────────────────────────────────────────
+   Motion-preview swatches (Settings → Appearance)
+   ────────────────────────────────────────────────────────────── */
+.motion-preview {
+  display: flex;
+  align-items: flex-end;
+  gap: 4px;
+  height: 22px;
+}
+.motion-bar {
+  width: 5px;
+  border-radius: 999px;
+  background: var(--accent);
+  transform-origin: bottom;
+  opacity: 0.75;
+}
+.motion-bar:nth-child(1) { height: 40%; }
+.motion-bar:nth-child(2) { height: 70%; }
+.motion-bar:nth-child(3) { height: 100%; }
+[data-preview='lively'] .motion-bar {
+  animation: motionBounce 1.15s var(--ease-spring) infinite;
+}
+[data-preview='lively'] .motion-bar:nth-child(2) { animation-delay: 0.12s; }
+[data-preview='lively'] .motion-bar:nth-child(3) { animation-delay: 0.24s; }
+[data-preview='calm'] .motion-bar {
+  animation: motionBreathe 2.4s var(--ease) infinite;
+}
+[data-preview='calm'] .motion-bar:nth-child(2) { animation-delay: 0.18s; }
+[data-preview='calm'] .motion-bar:nth-child(3) { animation-delay: 0.36s; }
+[data-preview='performance'] .motion-bar { opacity: 0.45; }
+
+@keyframes motionBounce {
+  0%, 100% { transform: scaleY(0.45); }
+  45% { transform: scaleY(1); }
+}
+@keyframes motionBreathe {
+  0%, 100% { opacity: 0.3; }
+  50% { opacity: 0.85; }
+}
+
+/* ──────────────────────────────────────────────────────────────
+   Animations
+   ────────────────────────────────────────────────────────────── */
 @keyframes fadeIn {
-  from { opacity: 0; transform: translateY(6px); }
+  from { opacity: 0; transform: translateY(var(--page-shift)); }
   to { opacity: 1; transform: translateY(0); }
 }
 .animate-fade-in {
-  animation: fadeIn 0.28s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  animation: fadeIn var(--dur) var(--ease) both;
 }
 @keyframes popIn {
   from { opacity: 0; transform: scale(0.96); }
   to { opacity: 1; transform: scale(1); }
 }
 .animate-pop-in {
-  animation: popIn 0.2s ease-out forwards;
+  animation: popIn var(--dur-slow) var(--ease-spring) both;
 }
 /* Staggered list-item entrance — GPU-friendly (opacity + translateY only).
    --i is set inline per item; capped via min() so 20+ items don't overflow. */
 @keyframes listItemIn {
-  from { opacity: 0; transform: translateY(4px); }
+  from { opacity: 0; transform: translateY(calc(var(--page-shift) * 0.4)); }
   to { opacity: 1; transform: translateY(0); }
 }
 .animate-list-item {
-  animation: listItemIn 0.24s cubic-bezier(0.16, 1, 0.3, 1) both;
-  animation-delay: min(calc(var(--i, 0) * 24ms), 240ms);
+  animation: listItemIn var(--dur) var(--ease) both;
+  animation-delay: min(calc(var(--i, 0) * var(--stagger)), 240ms);
 }
 /* Subtle slide-down for dropdowns / popovers. */
 @keyframes dropdownIn {
@@ -125,28 +446,45 @@ body {
   to { opacity: 1; transform: translateY(0) scale(1); }
 }
 .animate-dropdown-in {
-  animation: dropdownIn 0.18s cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation: dropdownIn var(--dur) var(--ease) both;
   transform-origin: top;
 }
+/* Route-level entrance: remounted per pathname by Layout. */
+@keyframes pageEnter {
+  from { opacity: 0; transform: translateY(var(--page-shift)) scale(var(--page-scale)); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+.page-enter {
+  animation: pageEnter var(--dur-slow) var(--ease) both;
+}
+
 /* Card lift on hover — uses translateZ to keep it on the GPU compositor. */
 .card-lift {
-  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1),
-              box-shadow 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  transition:
+    transform var(--dur) var(--ease),
+    box-shadow var(--dur) var(--ease);
   will-change: transform;
 }
 .card-lift:hover {
-  transform: translateY(-2px);
+  transform: translateY(var(--lift));
 }
 
-/* Unified list-row style used across the app.
-   Spacious padding, smooth hover, accent-tint active state. */
+/* Interactive press feedback shared by buttons/cards. */
+.press {
+  transition: transform var(--dur-fast) var(--ease-spring);
+}
+.press:active { transform: scale(0.975); }
+
+/* ──────────────────────────────────────────────────────────────
+   Lists
+   ────────────────────────────────────────────────────────────── */
 .list-row {
   display: flex;
   align-items: center;
   gap: 0.75rem;
   padding: 0.7rem 0.9rem;
   border-radius: 0.75rem;
-  transition: background-color 0.18s ease, color 0.18s ease;
+  transition: background-color var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease);
 }
 .list-row:hover {
   background-color: color-mix(in srgb, var(--accent) 6%, transparent);
@@ -158,63 +496,22 @@ body {
   color: var(--accent);
 }
 
-/* Reduced-motion / low-end device fallback: drop non-essential animations
-   so transitions remain snappy on entry-level hardware. */
-@media (prefers-reduced-motion: reduce) {
-  .animate-fade-in,
-  .animate-pop-in,
-  .animate-list-item,
-  .animate-dropdown-in {
-    animation: none !important;
-  }
-  .card-lift:hover {
-    transform: none;
-  }
-  .nav-icon,
-  .nav-label {
-    transition: none !important;
-  }
-}
-
-/* Nav hover: icon slides upper-left + CCW, label slides upper-right + CW */
+/* Legacy nav hover helper kept for any remaining consumers. */
 .nav-icon,
 .nav-label {
   display: inline-flex;
-  transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
-}
-.nav-item:hover .nav-icon {
-  transform: translate(-2px, -2px) rotate(-8deg);
-}
-.nav-item:hover .nav-label {
-  transform: translate(2px, -2px) rotate(6deg);
+  transition: transform var(--dur) var(--ease-spring);
 }
 
 /* Accent utilities */
-.bg-accent {
-  background-color: var(--accent);
-}
-.bg-accent-hover:hover {
-  background-color: var(--accent-hover);
-}
-.text-accent {
-  color: var(--accent);
-}
-.text-accent-contrast {
-  color: var(--accent-contrast, #ffffff);
-}
-.text-accent-contrast-muted {
-  color: color-mix(in srgb, var(--accent-contrast, #ffffff) 70%, transparent);
-}
-.border-accent {
-  border-color: var(--accent);
-}
-.ring-accent {
-  --tw-ring-color: var(--accent);
-}
-
-.bg-accent-tint {
-  background-color: color-mix(in srgb, var(--accent) 10%, transparent);
-}
+.bg-accent { background-color: var(--accent); }
+.bg-accent-hover:hover { background-color: var(--accent-hover); }
+.text-accent { color: var(--accent); }
+.text-accent-contrast { color: var(--accent-contrast, #ffffff); }
+.text-accent-contrast-muted { color: color-mix(in srgb, var(--accent-contrast, #ffffff) 70%, transparent); }
+.border-accent { border-color: var(--accent); }
+.ring-accent { --tw-ring-color: var(--accent); }
+.bg-accent-tint { background-color: color-mix(in srgb, var(--accent) 10%, transparent); }
 
 /* Heatmap cells (GitHub-style).
    Wider, non-linear color steps so the four active levels are clearly
@@ -236,4 +533,46 @@ html.scrollbar-hide::-webkit-scrollbar,
 html.scrollbar-hide body::-webkit-scrollbar,
 .scrollbar-hide::-webkit-scrollbar {
   display: none;
+}
+
+/* Performance mode also drops the rail's backdrop blur, which is the
+   single most expensive effect in the shell. */
+html[data-motion='performance'] .nav-rail {
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  background: rgba(255, 255, 255, 0.97);
+}
+html.dark[data-motion='performance'] .nav-rail {
+  background: rgba(15, 23, 42, 0.97);
+}
+
+/* ──────────────────────────────────────────────────────────────
+   Performance mode: kill every animation/transition, even ones
+   declared inline by Tailwind utilities.
+   ────────────────────────────────────────────────────────────── */
+html[data-motion='performance'] *,
+html[data-motion='performance'] *::before,
+html[data-motion='performance'] *::after {
+  animation-duration: 1ms !important;
+  animation-delay: 0ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 1ms !important;
+  transition-delay: 0ms !important;
+  scroll-behavior: auto !important;
+}
+
+/* Reduced-motion / low-end device fallback: drop non-essential animations
+   so transitions remain snappy on entry-level hardware. */
+@media (prefers-reduced-motion: reduce) {
+  /* Only when no explicit level was applied (e.g. very early boot or a
+     non-Tauri preview). An explicit choice from Settings always wins. */
+  html:not([data-motion]) *,
+  html:not([data-motion]) *::before,
+  html:not([data-motion]) *::after {
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 1ms !important;
+    scroll-behavior: auto !important;
+  }
+  html:not([data-motion]) .card-lift:hover { transform: none; }
 }

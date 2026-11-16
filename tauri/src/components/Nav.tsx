@@ -1,47 +1,82 @@
 import { NavLink } from 'react-router-dom';
-import { BookOpen, Languages, BookMarked, BarChart3, Settings } from 'lucide-react';
+import {
+  BookOpen,
+  Languages,
+  BookMarked,
+  BarChart3,
+  Settings,
+  LayoutDashboard,
+  type LucideIcon,
+} from 'lucide-react';
 import { useT } from '../i18n';
 
+interface RailItem {
+  to: string;
+  icon: LucideIcon;
+  label: string;
+  /** Shows a small accent dot hinting the feature is still on its way. */
+  upcoming?: boolean;
+}
+
+/** A single icon-only entry in the rail. The label is exposed as a native
+ *  title plus a styled tooltip that slides out of the rail on hover/focus. */
+function RailLink({ to, icon: Icon, label, upcoming }: RailItem) {
+  return (
+    <NavLink
+      to={to}
+      title={label}
+      aria-label={label}
+      className={({ isActive }) => `rail-btn${isActive ? ' is-active' : ''}`}
+    >
+      {({ isActive }) => (
+        <>
+          <span className="rail-indicator" aria-hidden="true" />
+          <span className="rail-glyph">
+            <Icon className="w-[1.15rem] h-[1.15rem]" strokeWidth={isActive ? 2.2 : 1.9} />
+          </span>
+          {upcoming && <span className="rail-dot" aria-hidden="true" />}
+          <span className="rail-tip" role="tooltip">{label}</span>
+        </>
+      )}
+    </NavLink>
+  );
+}
+
+/**
+ * Vertical, full-height navigation rail pinned to the left edge.
+ * Rendered as a rounded floating card with equal top/right/bottom margins.
+ * Primary destinations stack from the top; settings and the global dashboard
+ * live below a divider at the bottom.
+ */
 export function Nav() {
   const t = useT();
 
-  const items = [
+  const primary: RailItem[] = [
     { to: '/dictionary', icon: BookOpen, label: t('nav.dictionary') },
     { to: '/translate', icon: Languages, label: t('nav.translate') },
     { to: '/books', icon: BookMarked, label: t('nav.books') },
     { to: '/stats', icon: BarChart3, label: t('nav.stats') },
-    { to: '/settings', icon: Settings, label: t('nav.settings') },
   ];
-  return (
-    <header className="sticky top-0 z-20 border-b border-slate-200/60 dark:border-slate-800/60 bg-white/70 dark:bg-slate-950/60 backdrop-blur-xl">
-      <div className="max-w-4xl mx-auto px-6 h-16 flex items-center justify-between">
-        <div className="flex items-center gap-2.5 select-none">
-          <img src="./icon.png" alt="CDictionary" className="w-8 h-8" />
-          <span className="font-serif-display text-lg text-slate-900 dark:text-slate-100">CDictionary</span>
-        </div>
 
-        <nav className="flex items-center gap-1 p-1 rounded-2xl bg-slate-100/80 dark:bg-slate-900/70 ring-1 ring-slate-200/60 dark:ring-slate-800/60">
-          {items.map((item) => {
-            const Icon = item.icon;
-            return (
-              <NavLink
-                key={item.to}
-                to={item.to}
-                className={({ isActive }) =>
-                  `nav-item flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-sm font-medium ${
-                    isActive
-                      ? 'bg-white dark:bg-slate-800 text-accent shadow-soft'
-                      : 'text-slate-500 dark:text-slate-400'
-                  }`
-                }
-              >
-                <span className="nav-icon inline-flex"><Icon className="w-4 h-4" /></span>
-                <span className="nav-label">{item.label}</span>
-              </NavLink>
-            );
-          })}
-        </nav>
+  const secondary: RailItem[] = [
+    { to: '/settings', icon: Settings, label: t('nav.settings') },
+    { to: '/dashboard', icon: LayoutDashboard, label: t('nav.dashboard'), upcoming: true },
+  ];
+
+  return (
+    <aside className="nav-rail" aria-label={t('nav.primary')}>
+      <nav className="flex w-full flex-col items-center gap-1.5 px-2 pt-0.5">
+        {primary.map((item) => (
+          <RailLink key={item.to} {...item} />
+        ))}
+      </nav>
+
+      <div className="mt-auto flex w-full flex-col items-center gap-1.5 px-2 pb-0.5">
+        <div className="rail-divider" aria-hidden="true" />
+        {secondary.map((item) => (
+          <RailLink key={item.to} {...item} />
+        ))}
       </div>
-    </header>
+    </aside>
   );
 }

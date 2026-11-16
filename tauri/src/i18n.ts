@@ -17,6 +17,17 @@ const messages: Record<Locale, Record<string, string>> = {
     'nav.books': '词书',
     'nav.stats': '统计',
     'nav.settings': '设置',
+    'nav.dashboard': '全局面板',
+    'nav.primary': '主导航',
+
+    // Global dashboard (placeholder)
+    'dashboard.subtitle': '多软件互联的统一入口',
+    'dashboard.badge': '建设中',
+    'dashboard.comingSoon': '敬请期待',
+    'dashboard.desc': '全局面板将把 CDictionary 与其他软件串联起来，在这里统一查看数据、状态与快捷入口。',
+    'dashboard.point.interconnect': '多软件互联',
+    'dashboard.point.overview': '数据总览',
+    'dashboard.point.entry': '统一入口',
 
     // Settings tabs
     'settings.tabs.general': '通用',
@@ -26,6 +37,7 @@ const messages: Record<Locale, Record<string, string>> = {
     'settings.tabs.audio': '语音',
     'settings.tabs.experimental': '实验性',
     'settings.tabs.about': '关于',
+    'settings.subtitle': '调整外观、模型、词典与快捷键。',
 
     // Settings → General (Appearance)
     'settings.general.theme': '主题',
@@ -47,6 +59,14 @@ const messages: Record<Locale, Record<string, string>> = {
     'settings.general.systemDesc': '配置开机启动行为。',
     'settings.general.launchAtLogin': '开机自启动',
     'settings.general.launchAtLoginDesc': '登录系统时自动启动 CDictionary。',
+    'settings.general.motion': '动画效果',
+    'settings.general.motionDesc': '选择界面动效的强度。性能模式会关闭所有动画，适合低配置设备。',
+    'settings.general.motionLively': '活泼',
+    'settings.general.motionLivelyDesc': '弹性回弹与分层入场，界面更有生命力。',
+    'settings.general.motionCalm': '克制',
+    'settings.general.motionCalmDesc': '短促的淡入与轻微位移，安静利落。',
+    'settings.general.motionPerformance': '性能',
+    'settings.general.motionPerformanceDesc': '关闭全部动画与过渡，优先保证流畅。',
 
     // Settings → Dictionary
     'settings.dict.cacheManagement': '缓存管理',
@@ -347,6 +367,17 @@ const messages: Record<Locale, Record<string, string>> = {
     'nav.books': 'Books',
     'nav.stats': 'Stats',
     'nav.settings': 'Settings',
+    'nav.dashboard': 'Global Dashboard',
+    'nav.primary': 'Primary navigation',
+
+    // Global dashboard (placeholder)
+    'dashboard.subtitle': 'The unified hub for your connected apps',
+    'dashboard.badge': 'In progress',
+    'dashboard.comingSoon': 'Coming soon',
+    'dashboard.desc': 'The global dashboard will connect CDictionary with your other apps — one place for data, status and quick entries.',
+    'dashboard.point.interconnect': 'App interconnect',
+    'dashboard.point.overview': 'Data overview',
+    'dashboard.point.entry': 'Single entry point',
 
     // Settings tabs
     'settings.tabs.general': 'General',
@@ -356,6 +387,7 @@ const messages: Record<Locale, Record<string, string>> = {
     'settings.tabs.audio': 'Audio',
     'settings.tabs.experimental': 'Experimental',
     'settings.tabs.about': 'About',
+    'settings.subtitle': 'Tune the appearance, models, dictionary and shortcuts.',
 
     // Settings → General
     'settings.general.theme': 'Theme',
@@ -377,6 +409,14 @@ const messages: Record<Locale, Record<string, string>> = {
     'settings.general.systemDesc': 'Configure startup behavior.',
     'settings.general.launchAtLogin': 'Launch at Login',
     'settings.general.launchAtLoginDesc': 'Automatically start CDictionary when you log in.',
+    'settings.general.motion': 'Motion',
+    'settings.general.motionDesc': 'Choose how animated the interface feels. Performance disables every animation, which suits low-end devices.',
+    'settings.general.motionLively': 'Lively',
+    'settings.general.motionLivelyDesc': 'Springy feedback and layered entrances that bring the UI to life.',
+    'settings.general.motionCalm': 'Restrained',
+    'settings.general.motionCalmDesc': 'Short fades and tiny shifts — quiet and crisp.',
+    'settings.general.motionPerformance': 'Performance',
+    'settings.general.motionPerformanceDesc': 'All animations and transitions off. Smoothness first.',
 
     // Settings → Dictionary
     'settings.dict.cacheManagement': 'Cache Management',

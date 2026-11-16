@@ -36,12 +36,20 @@ export interface DictionaryIndex {
 
 export type AccentColor = 'brick' | 'orange' | 'pink' | 'purple' | 'indigo' | 'blue' | 'teal' | 'cyan' | 'aqua' | 'green' | 'lime';
 
+/** Intensity of the global UI motion system.
+ *  - lively: springy, layered entrances (default)
+ *  - calm: short, quiet fades and small shifts
+ *  - performance: every animation/transition disabled */
+export type MotionLevel = 'lively' | 'calm' | 'performance';
+
 export interface AppSettings {
   theme: 'light' | 'dark' | 'system';
   accentColor: AccentColor | 'custom';
   customAccentColor: string;
   language: 'zh-CN' | 'en';
   uiScale: number;
+  /** Global animation intensity (lively / calm / performance). */
+  motion: MotionLevel;
   /** Whether to hide scrollbars on all pages (still scrollable via mouse/trackpad/keyboard). */
   hideScrollbar: boolean;
   dictionaryPath: string;
@@ -95,6 +103,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   customAccentColor: '#30524E',
   language: 'zh-CN',
   uiScale: 100,
+  motion: 'lively',
   hideScrollbar: true,
   dictionaryPath: 'd:\\trae\\CDictionary\\dictionary',
   llm: {

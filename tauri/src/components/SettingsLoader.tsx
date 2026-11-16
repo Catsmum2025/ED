@@ -8,8 +8,17 @@ import { useSettingsStore } from '../store/settings';
  *  could translate fine. Mount once near the app root. */
 export function SettingsLoader() {
   const load = useSettingsStore((s) => s.load);
+  const motion = useSettingsStore((s) => s.motion);
+
   useEffect(() => {
     load();
   }, [load]);
+
+  // Drive the global animation intensity from a single place so popup windows
+  // (which bypass Layout) respect it too.
+  useEffect(() => {
+    document.documentElement.dataset.motion = motion || 'lively';
+  }, [motion]);
+
   return null;
 }

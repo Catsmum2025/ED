@@ -3,6 +3,7 @@ import { ExtractionWatcher } from './ExtractionWatcher';
 import { ExtractionOverlay } from './ExtractionOverlay';
 import { useSettingsStore } from '../store/settings';
 import { useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import { ACCENT_COLORS } from '../types';
 
 function darken(hex: string, amount = 0.15) {
@@ -42,6 +43,7 @@ function contrastTextColor(hex: string): string {
 
 export function Layout({ children }: { children: React.ReactNode }) {
   const { theme, accentColor, customAccentColor, uiScale, hideScrollbar, load } = useSettingsStore();
+  const { pathname } = useLocation();
 
   useEffect(() => {
     load();
@@ -83,7 +85,13 @@ export function Layout({ children }: { children: React.ReactNode }) {
     <div className="app-bg min-h-screen text-slate-900 dark:text-slate-100">
       <ExtractionWatcher />
       <Nav />
-      <main className="max-w-4xl mx-auto px-6 py-10">{children}</main>
+      <main className="app-main min-h-screen">
+        {/* Keying on the pathname replays the entrance animation on every
+            route change (including settings sub-tabs). */}
+        <div key={pathname} className="page-enter mx-auto w-full max-w-5xl">
+          {children}
+        </div>
+      </main>
       <ExtractionOverlay />
     </div>
   );

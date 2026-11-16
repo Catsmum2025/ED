@@ -7,7 +7,13 @@ import { useT } from '../i18n';
 
 export function AppearanceSettings() {
   const t = useT();
-  const { theme, accentColor, customAccentColor, language, uiScale, hideScrollbar, system, update } = useSettingsStore();
+  const { theme, accentColor, customAccentColor, language, uiScale, motion, hideScrollbar, system, update } = useSettingsStore();
+
+  const motionOptions: Array<{ value: AppSettings['motion']; label: string; desc: string }> = [
+    { value: 'lively', label: t('settings.general.motionLively'), desc: t('settings.general.motionLivelyDesc') },
+    { value: 'calm', label: t('settings.general.motionCalm'), desc: t('settings.general.motionCalmDesc') },
+    { value: 'performance', label: t('settings.general.motionPerformance'), desc: t('settings.general.motionPerformanceDesc') },
+  ];
 
   return (
     <div className="space-y-4">
@@ -67,6 +73,68 @@ export function AppearanceSettings() {
                 />
               </label>
             </div>
+          </div>
+        </CardContent>
+      </Card>
+
+
+      <Card>
+        <CardHeader>
+          <CardTitle>{t('settings.general.motion')}</CardTitle>
+          <CardDescription>{t('settings.general.motionDesc')}</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div
+            role="radiogroup"
+            aria-label={t('settings.general.motion')}
+            className="grid gap-3 sm:grid-cols-3"
+          >
+            {motionOptions.map((option) => {
+              const selected = motion === option.value;
+              return (
+                <button
+                  key={option.value}
+                  type="button"
+                  role="radio"
+                  aria-checked={selected}
+                  onClick={() => update({ motion: option.value })}
+                  className={`press group relative rounded-2xl border p-4 text-left transition-colors ${
+                    selected
+                      ? 'border-accent bg-accent-tint'
+                      : 'border-slate-200/80 hover:border-slate-300 hover:bg-slate-50/70 dark:border-slate-700/80 dark:hover:border-slate-600 dark:hover:bg-slate-800/40'
+                  }`}
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <span
+                      className={`text-sm font-semibold ${
+                        selected ? 'text-accent' : 'text-slate-700 dark:text-slate-200'
+                      }`}
+                    >
+                      {option.label}
+                    </span>
+                    <span
+                      className={`grid h-4 w-4 shrink-0 place-items-center rounded-full border ${
+                        selected
+                          ? 'border-accent bg-accent'
+                          : 'border-slate-300 dark:border-slate-600'
+                      }`}
+                    >
+                      {selected && <span className="h-1.5 w-1.5 rounded-full bg-white" />}
+                    </span>
+                  </div>
+
+                  <div className="motion-preview mt-4" data-preview={option.value} aria-hidden="true">
+                    {[0, 1, 2].map((i) => (
+                      <span key={i} className="motion-bar" />
+                    ))}
+                  </div>
+
+                  <p className="mt-3 text-xs leading-relaxed text-slate-500 dark:text-slate-400">
+                    {option.desc}
+                  </p>
+                </button>
+              );
+            })}
           </div>
         </CardContent>
       </Card>

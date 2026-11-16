@@ -78,6 +78,8 @@ pub struct AppSettings {
     pub language: String,
     #[serde(rename = "uiScale")]
     pub ui_scale: f64,
+    /// Global animation intensity: "lively" | "calm" | "performance".
+    pub motion: String,
     pub hide_scrollbar: bool,
     pub dictionary_path: String,
     pub llm: LlmSettings,
@@ -96,6 +98,7 @@ impl Default for AppSettings {
             custom_accent_color: "#30524E".into(),
             language: "zh-CN".into(),
             ui_scale: 100.0,
+            motion: "lively".into(),
             hide_scrollbar: true,
             dictionary_path: DEFAULT_DICTIONARY_PATH.into(),
             llm: LlmSettings {
