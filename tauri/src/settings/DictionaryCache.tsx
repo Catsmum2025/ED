@@ -32,7 +32,9 @@ export function DictionaryCacheSettings() {
       // Refresh both the input box and the entry-count display.
       api.dict.indexStatus().then((s) => {
         setStatus(s);
-        if (s.exists) update({ dictionaryPath: useSettingsStore.getState().dictionaryPath });
+        // NOTE: do NOT re-save the store's dictionaryPath here — during install
+        // the backend already pointed it at the extracted directory; writing the
+        // (stale) store value back used to undo that and break the feature.
       });
     }
   }, [extractionState, extractionCount, update]);

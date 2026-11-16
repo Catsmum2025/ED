@@ -103,6 +103,35 @@ fn main() {
                     st.local_model.lock().unwrap().start(&cmd);
                 }
             }
+
+            // Developer hook: run with CDICTIONARY_SELFTEST=install to exercise the
+            // whole dictionary-install pipeline (bundled-zip lookup -> extract ->
+            // flatten -> settings persistence -> index rebuild) and then exit.
+            // Used to verify packaged artifacts headlessly.
+            if std::env::var("CDICTIONARY_SELFTEST").ok().as_deref() == Some("install") {
+                let h = handle.clone();
+                std::thread::spawn(move || {
+                    std::thread::sleep(std::time::Duration::from_millis(1500));
+                    let zip = installer::find_bundled_zip().unwrap_or_else(|| "<none>".into());
+                    println!("[selftest] bundled zip: {zip}");
+                    let dest = state::default_dictionary_dir();
+                    println!("[selftest] dest dir: {}", dest.display());
+                    if let Some(win) = h.get_webview_window("main") {
+                        match installer::run_install(&win, &zip, &dest) {
+                            Ok(()) => println!("[selftest] run_install OK"),
+                            Err(err) => println!("[selftest] run_install FAILED: {err}"),
+                        }
+                    } else {
+                        println!("[selftest] main window not found");
+                    }
+                    let st = h.state::<AppState>();
+                    let s = st.settings.lock().unwrap();
+                    println!("[selftest] persisted dictionaryPath: {}", s.dictionary_path);
+                    drop(s);
+                    println!("[selftest] index status: {:?}", st.dict.lock().unwrap().status());
+                    let _ = h.exit(0);
+                });
+            }
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![

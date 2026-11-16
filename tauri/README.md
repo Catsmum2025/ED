@@ -7,6 +7,7 @@ Electron 版（见 ../electron/app）的 Tauri v2 重构移植，UI 与功能尽
 - 安装包（NSIS）：pnpm tauri build → src-tauri/target/release/bundle/nsis/CDictionary_0.1.0_x64-setup.exe
 - Portable：先执行 pnpm tauri build，再 powershell -File make-portable.ps1 → release/CDictionary-0.1.0-Portable.zip（Tauri 2.x 无内置 portable 打包目标，此脚本把 release 产物 + resources 打成 zip）
 - 图标：pnpm icon（源图 app-icon.png，tauri icon 生成 src-tauri/icons/*）
+- 无头自检：设置环境变量 CDICTIONARY_SELFTEST=install 后运行 exe，会自动执行完整“解压词库”管线（找内置 zip → 解压 → flatten → 写 settings → 重建索引）并打印结果后退出，用于打包产物验证
 
 ## 移植要点（与 Electron 版的对应关系）
 - electron/main.ts + services/*.ts → src-tauri/src/*.rs（Rust 重写：词典索引/搜索、词书、统计、LLM 流式翻译、IndexTTS 缓存、本地模型进程管理、词库 zip 安装器）

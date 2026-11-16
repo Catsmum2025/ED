@@ -176,7 +176,21 @@ pub fn save_settings(settings: &AppSettings) -> Result<(), String> {
         let _ = fs::create_dir_all(dir);
     }
     let json = serde_json::to_string_pretty(settings).map_err(|e| e.to_string())?;
-    fs::write(&path, json).map_err(|e| e.to_string())
+    // Antivirus / indexers can hold a brief exclusive lock on freshly written
+    // JSON files (observed to silently eat the settings write around app exit),
+    // so retry a few times before giving up.
+    let mut last_err = String::new();
+    for attempt in 0..5 {
+        match fs::write(&path, &json) {
+            Ok(()) => return Ok(()),
+            Err(err) => {
+                last_err = err.to_string();
+                eprintln!("[save_settings] attempt {} failed: {}", attempt + 1, last_err);
+                std::thread::sleep(std::time::Duration::from_millis(150));
+            }
+        }
+    }
+    Err(last_err)
 }
 
 use tauri::{AppHandle, State};
