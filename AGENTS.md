@@ -4,7 +4,7 @@
 
 ## 1. 当前状态快照（2026-11-16）
 - **主线**：`tauri/`（Tauri v2 重构版），功能已对齐 Electron 版并全部验证可用
-- **git**：仓库根 = `D:/trae/CDictionary`，分支 `main`，最新提交见 `git log`（写本文档时为 `b590627 fix(dict-install): ...`，共 3 个提交）
+- **git**：仓库根 = `D:/trae/CDictionary`；`main` 为稳定线，2026-11-16 的 UI 重构在分支 `feat/vertical-rail-nav`（b88b5c2 / a8a41a0 / 47895f9），合并前以该分支为准
 - **产物**（本地路径，未入库）：
   - NSIS：`tauri/src-tauri/target/release/bundle/nsis/CDictionary_0.1.0_x64-setup.exe`（约 48.8 MB）
   - Portable：`tauri/release/CDictionary-0.1.0-Portable.zip`（约 52 MB，由 make-portable.ps1 生成）
@@ -18,6 +18,9 @@
   1. `6c96643` 初始导入（electron 原版 + tauri 移植源码）
   2. `548e767` Tauri 编译修复 + NSIS/portable 打包链路 + README
   3. `b590627` 解压词库功能修复（前端竞态、save 重试、单元测试、自检钩子、electron-builder.yml 补档）
+  4. `b88b5c2` UI 重构一期：左侧竖向图标导航、全局面板占位、设置二级菜单、三档动效
+  5. `a8a41a0` 文档：根 README + 本工作备忘
+  6. `47895f9` UI 重构二期：自定义下拉、统一圆角、中文反查打分增强 + 单元测试
 - 根目录 `merged_dict_json/`、`_work/` 是用户的空目录/工作目录，git 不跟踪，**不要动**
 
 ## 3. 工具链与环境（本机实测版本）
@@ -42,7 +45,8 @@ powershell -ExecutionPolicy Bypass -File .\make-portable.ps1
 - pnpm 安装时 esbuild 的 build script 警告可忽略（vite 构建正常）
 
 ### 验证（改完必跑）
-1. `cd src-tauri && cargo test --bins` —— 含对真实 dictionary.zip 的解压/flatten 单元测试（约 21s）
+1. `cd src-tauri && cargo test --bins` —— 含对真实 dictionary.zip 的解压/flatten 单元测试与中文检索打分单测（约 25s）
+   - 可选（中文反查回归）：`$env:CDICTIONARY_TEST_DICT = "$env:APPDATA\com.ahpx.cdictionary\dictionary"` 后运行 `cargo test --bins chinese_search_against_real_dictionary_when_available -- --nocapture`；全量 2.5 万词条扫库受杀软 IO 影响可能很慢，可先拷约 400 个样本目录验证
 2. **无头端到端自检**：`CDICTIONARY_SELFTEST=install` 启动 release exe → 完整执行词库安装管线并打印后自动退出：
    ```powershell
    $env:CDICTIONARY_SELFTEST = "install"
@@ -71,13 +75,18 @@ powershell -ExecutionPolicy Bypass -File .\make-portable.ps1
 - **窗口 label 约定**：`main` / `popup-dict` / `popup-translate`；弹窗失焦自动隐藏（main.rs 全局 on_window_event 按 label 前缀匹配）、主窗口 CloseRequested→hide（托盘退出经 QUITTING 原子标志放行）
 - **数据目录**：见 state.rs；resource_dir 里找 dictionary.zip/popup-icon.png（兼容 `<rd>/`、`<rd>/resources/` 两种布局）
 - **词库安装流**：installer.rs `extract_and_flatten`（zip crate，无 PowerShell 依赖，可单测）→ 写 settings.dictionaryPath → dict.update_path → rebuild（带进度回调）→ emit Done；前端 ExtractionWatcher 负责把新路径镜像进 store（勿删！曾有陈旧回写竞态导致功能回归，见 b590627）
+- **前端外壳**：`components/Nav.tsx` 左侧 fixed 竖向图标导航（全高圆角卡片、底部隔线放设置与 `/dashboard`）；`components/Layout.tsx` 用 `.app-main` 预留导航偏移并按 pathname 重放入场动画
+- **设计系统**：圆角统一为 4/8/12/16/full（tailwind.config.js 的 borderRadius + index.css 的 --radius 变量）；下拉统一用 `components/Select.tsx`（自定义 listbox，默认下滑展开、空间不足向上翻转、键盘/ARIA 完整），**禁止原生 select**
+- **动效三档**：settings.motion（lively/calm/performance）→ SettingsLoader 写到 `<html data-motion>` → index.css 的 --dur/--ease/--page-shift 等令牌驱动全部动画；performance 档全局 1ms 并去掉导航毛玻璃
+- **中文反查**：dictionary.rs 的 `normalize_chinese_query`（剥离“怎么说/的英文/是什么意思”等问法）+ `score_chinese`（concise 加权、短语 > 起始 > 包含 > 相邻 bigram ≥50% > 字符覆盖 ≥60%，长度惩罚）；前端回车直接取排名第一的候选
 
 ## 7. 历史工作时间线
 1. **迁移**：原 Electron 项目整体移入 `electron/app/`；根目录建 git 仓库
 2. **移植**：前端整拷 + ipc.ts 适配层重写；Rust 端按 Electron services 逐模块重写（settings/dictionary/stats/wordbooks/llm/tts/localmodel/installer/windows）；用户提供的 app-icon.png 经 `pnpm exec tauri icon` 生成全套图标
 3. **编译修复轮**：共 15 处错误（import 路径、builder API 差异、插件 API、chrono、?/Result 包装等），全部记录于第 5 节；最终 cargo check/test 零警告
 4. **首版产物**：NSIS + portable zip，冒烟通过（提交 548e767）
-5. **解压词库修复**（用户反馈“不可用”，提交 b590627），三层根因：
+5. **UI 重构**（提交 b88b5c2 / 47895f9）：竖向图标导航 + 全局面板占位 + 设置二级菜单；动效三档；原生 select 全部替换为自定义下拉；圆角统一；中文反查打分重写
+6. **解压词库修复**（用户反馈“不可用”，提交 b590627），三层根因：
    - Tauri 前端：DictionaryCache done-effect 里 `update({dictionaryPath: store旧值})` 把后端已写好的新路径覆盖回滚 → 删除该行 + ExtractionWatcher 在 installDone 时镜像新路径
    - Electron 原版：仓库缺 electron-builder 配置，装机版从未打进 dictionary.zip → 补 `electron/app/electron-builder.yml`（Electron 产物未重建）
    - 附带加固：save_settings 写盘重试（杀软锁文件场景）
