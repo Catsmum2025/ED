@@ -8,8 +8,10 @@
 :root {
   --accent: #2563eb;
   --accent-hover: #1d4ed8;
-  --radius: 14px;
-  --radius-sm: 10px;
+  /* One radius scale: 8px chips, 12px controls, 16px surfaces. */
+  --radius: 12px;
+  --radius-sm: 8px;
+  --radius-lg: 16px;
   --cell-empty: #ebedf0;
   --bg-grad: linear-gradient(180deg, #fbfcfe 0%, #eef2f7 100%);
   --shadow-card: 0 1px 2px rgba(15, 23, 42, 0.04), 0 2px 8px rgba(15, 23, 42, 0.05);
@@ -188,7 +190,7 @@ body {
   flex-direction: column;
   align-items: center;
   padding: 0.7rem 0;
-  border-radius: 1.75rem;
+  border-radius: var(--radius-lg);
   background: color-mix(in srgb, #ffffff 84%, transparent);
   border: 1px solid rgba(148, 163, 184, 0.16);
   box-shadow: var(--shadow-rail);
@@ -207,7 +209,7 @@ body {
   height: 2.75rem;
   display: grid;
   place-items: center;
-  border-radius: 0.9rem;
+  border-radius: var(--radius);
   color: #64748b;
   background: transparent;
   border: 0;
@@ -288,7 +290,7 @@ body {
   line-height: 1;
   letter-spacing: 0.01em;
   padding: 0.45rem 0.65rem;
-  border-radius: 0.55rem;
+  border-radius: var(--radius-sm);
   background: rgba(15, 23, 42, 0.92);
   color: #f8fafc;
   box-shadow: 0 8px 24px rgba(15, 23, 42, 0.18);
@@ -327,7 +329,7 @@ body {
   align-items: center;
   gap: 0.6rem;
   padding: 0.55rem 0.7rem 0.55rem 0.85rem;
-  border-radius: 0.7rem;
+  border-radius: var(--radius);
   font-size: 0.875rem;
   font-weight: 500;
   color: #64748b;
@@ -449,6 +451,16 @@ body {
   animation: dropdownIn var(--dur) var(--ease) both;
   transform-origin: top;
 }
+/* Upward variant for popovers that flip near the viewport bottom. */
+@keyframes dropdownUp {
+  from { opacity: 0; transform: translateY(4px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+.animate-dropdown-up {
+  animation: dropdownUp var(--dur) var(--ease) both;
+  transform-origin: bottom;
+}
+
 /* Route-level entrance: remounted per pathname by Layout. */
 @keyframes pageEnter {
   from { opacity: 0; transform: translateY(var(--page-shift)) scale(var(--page-scale)); }

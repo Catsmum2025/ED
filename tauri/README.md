@@ -17,6 +17,13 @@ Electron 版（见 ../electron/app）的 Tauri v2 重构移植，UI 与功能尽
 - 词典安装：内置 resources/dictionary.zip 用 zip crate 解压并带进度事件（不再依赖 PowerShell/Tar）
 - 系统托盘、单实例、开机自启（tauri-plugin-autostart）、目录/文件对话框、shell openPath 均以官方插件实现
 
+## 界面与交互约定（2026-11 UI 重构）
+- 外壳：左侧竖向图标导航栏（fixed 全高圆角卡片，底部隔线放“设置”与“全局面板”）；主内容通过 `.app-main` 预留导航偏移，页面切换有入场动画
+- 设计标尺：圆角统一为 4 / 8 / 12 / 16 / full 五档（tailwind.config.js + index.css 的 --radius 变量），不要再引入新的任意圆角值
+- 下拉：统一使用 `src/components/Select.tsx`（自定义 listbox：默认向下滑出、空间不足自动向上翻转、圆角/填充/阴影与卡片一致、支持键盘与 ARIA），禁止使用原生 select
+- 动效：设置 → 通用 → 动画效果（lively / calm / performance）；SettingsLoader 把档位写到 `<html data-motion>`，index.css 用 CSS 变量令牌驱动全部动画；新增动画请使用 --dur/--ease/--page-shift 等令牌，性能档会全局禁用
+- 全局面板：/dashboard 为多软件互联占位页（敬请期待）
+
 ## 已知差异
 - apiKey 以明文存于 %APPDATA%/com.ahpx.cdictionary/settings.json（Electron 用 safeStorage/DPAPI；Tauri 无等价 API）
 - Windows 7/8 不支持（WebView2）；安装器为 per-user NSIS（v2 配置中无 oneClick 字段，向导行为由模板默认决定）

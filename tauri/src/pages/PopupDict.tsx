@@ -45,12 +45,17 @@ export function PopupDictPage() {
     const target = (word || query).trim();
     if (!target) return;
     setLoading(true);
-    const detail = await api.dict.getWord(target);
+    const targetLang = /[\u4e00-\u9fa5]/.test(target) ? 'zh' : 'en';
+    let detail = await api.dict.getWord(target);
+    // Chinese query: resolve to the top-ranked English headword.
+    if (!detail && targetLang === 'zh' && candidates.length > 0) {
+      detail = await api.dict.getWord(candidates[0].word);
+    }
     setLoading(false);
     if (detail) {
       setSelected(detail);
       setCandidates([]);
-      await api.stats.record(detail.word, lang);
+      await api.stats.record(detail.word, targetLang);
     } else {
       setSelected(null);
       setCandidates([]);
@@ -67,6 +72,7 @@ export function PopupDictPage() {
     } else if (e.key === 'Enter') {
       e.preventDefault();
       if (activeIndex >= 0 && candidates[activeIndex]) handleSearch(candidates[activeIndex].word);
+      else if (lang === 'zh' && candidates.length > 0) handleSearch(candidates[0].word);
       else handleSearch();
     } else if (e.key === 'Escape') {
       api.window.hide();

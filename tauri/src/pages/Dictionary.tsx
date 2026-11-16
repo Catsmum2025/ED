@@ -19,6 +19,7 @@ export function DictionaryPage() {
   const [selected, setSelected] = useState<WordDefinition | null>(null);
   const [activeIndex, setActiveIndex] = useState(-1);
   const [notFoundWord, setNotFoundWord] = useState<string | null>(null);
+  const [zhNoResult, setZhNoResult] = useState<string | null>(null);
   const [generating, setGenerating] = useState(false);
   const [genError, setGenError] = useState<string | null>(null);
   const [randomWord, setRandomWord] = useState<WordDefinition | null>(null);
@@ -123,11 +124,12 @@ export function DictionaryPage() {
 
   useEffect(() => {
     const timer = setTimeout(async () => {
+      setZhNoResult(null);
       if (!query.trim()) {
         setCandidates([]);
         return;
       }
-      const results = await api.dict.search(query, lang, 10);
+      const results = await api.dict.search(query, lang, 12);
       setCandidates(results);
       setActiveIndex(-1);
     }, 150);
@@ -137,17 +139,25 @@ export function DictionaryPage() {
   const handleSearch = async (word?: string) => {
     const target = (word || query).trim();
     if (!target) return;
-    const detail = await api.dict.getWord(target);
+    const targetLang = /[\u4e00-\u9fa5]/.test(target) ? 'zh' : 'en';
+    let detail = await api.dict.getWord(target);
+    // A Chinese query is not an English headword, so fall back to the
+    // best-ranked candidate — Enter and the search button then always work.
+    if (!detail && targetLang === 'zh' && candidates.length > 0) {
+      detail = await api.dict.getWord(candidates[0].word);
+    }
     if (detail) {
       setSelected(detail);
       setNotFoundWord(null);
+      setZhNoResult(null);
       setGenError(null);
-      await api.stats.record(detail.word, lang);
+      await api.stats.record(detail.word, targetLang);
       setCandidates([]);
     } else {
       // Not found: offer AI generation for English words only.
       setSelected(null);
-      setNotFoundWord(lang === 'en' ? target : null);
+      setNotFoundWord(targetLang === 'en' ? target : null);
+      setZhNoResult(targetLang === 'zh' ? target : null);
       setGenError(null);
       setCandidates([]);
     }
@@ -181,6 +191,9 @@ export function DictionaryPage() {
       e.preventDefault();
       if (activeIndex >= 0 && candidates[activeIndex]) {
         handleSearch(candidates[activeIndex].word);
+      } else if (lang === 'zh' && candidates.length > 0) {
+        // Chinese lookup: confirming the query means "take the best match".
+        handleSearch(candidates[0].word);
       } else {
         handleSearch();
       }
@@ -229,6 +242,17 @@ export function DictionaryPage() {
           </div>
         )}
       </div>
+
+      {!selected && !notFoundWord && zhNoResult && candidates.length === 0 && (
+        <div className="max-w-2xl mx-auto animate-fade-in">
+          <Card>
+            <CardContent className="py-10 text-center">
+              <p className="text-slate-700 dark:text-slate-300">{t('dict.zhNoResult', { word: zhNoResult })}</p>
+              <p className="mt-1.5 text-sm text-slate-400 dark:text-slate-500">{t('dict.zhNoResultHint')}</p>
+            </CardContent>
+          </Card>
+        </div>
+      )}
 
       {!selected && notFoundWord && (
         <div className="max-w-2xl mx-auto animate-fade-in">

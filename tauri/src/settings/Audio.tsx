@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../co
 import { Button } from '../components/Button';
 import { Input } from '../components/Input';
 import { Toggle } from '../components/Toggle';
+import { Select } from '../components/Select';
 import { api } from '../ipc';
 
 interface Voice {
@@ -134,18 +135,20 @@ export function AudioSettings() {
               <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1.5">
                 {t('settings.audio.voice')} {loadingVoices && <span className="text-slate-400">{t('settings.audio.voiceLoading')}</span>}
               </label>
-              <select
+              <Select
+                className="max-w-md"
                 value={audio.voice}
                 onChange={(e) => update({ audio: { ...audio, voice: e.target.value } })}
-                className="w-full max-w-md px-3.5 py-2 rounded-lg bg-slate-50 dark:bg-slate-800/70 border border-slate-200/60 dark:border-slate-700/60 text-sm text-slate-900 dark:text-slate-100 outline-none focus:border-accent focus:ring-2 focus:ring-accent/15"
-              >
-                {voices.length === 0 && <option value={audio.voice}>{audio.voice || t('settings.audio.voiceEmpty')}</option>}
-                {voices.map((v) => (
-                  <option key={v.id} value={v.id}>
-                    {v.id}{v.name && v.name !== v.id ? ` · ${v.name}` : ''}
-                  </option>
-                ))}
-              </select>
+                placeholder={t('settings.audio.voiceEmpty')}
+                options={
+                  voices.length > 0
+                    ? voices.map((v) => ({
+                        value: v.id,
+                        label: v.id + (v.name && v.name !== v.id ? ` · ${v.name}` : ''),
+                      }))
+                    : [{ value: audio.voice, label: audio.voice || t('settings.audio.voiceEmpty') }]
+                }
+              />
             </div>
 
             <div>

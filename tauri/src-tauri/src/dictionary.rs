@@ -296,39 +296,36 @@ impl DictionaryService {
 
     pub fn search(&self, query: &str, lang: &str, limit: usize) -> Vec<WordEntry> {
         let idx = match &self.index { Some(i) => i, None => return vec![] };
-        let q = query.trim().to_lowercase();
-        if q.is_empty() { return vec![]; }
+        let raw = query.trim();
+        if raw.is_empty() { return vec![]; }
 
         let mut scored: Vec<(usize, &IndexEntry)> = Vec::new();
         if lang == "en" {
+            let q = raw.to_lowercase();
+            if q.is_empty() { return vec![]; }
             for e in &idx.entries {
                 let s = score_english(&e.word, &q);
                 if s > 0 { scored.push((s, e)); }
             }
         } else {
-            let mut qchars: Vec<char> = Vec::new();
-            for c in q.chars().filter(|c| is_cjk(*c)) {
-                if !qchars.contains(&c) { qchars.push(c); }
-            }
+            // Chinese lookup: strip question wrappers ("...怎么说"), then score
+            // phrase matches against the concise definition and its Chinese
+            // tokens. Ranking prefers exact words, then phrases, then partial
+            // character overlap; shorter (more common) English words win ties.
+            let normalized = normalize_chinese_query(raw);
+            let qchars: Vec<char> = normalized.chars().filter(|c| is_cjk(*c)).collect();
             if qchars.is_empty() { return vec![]; }
             for e in &idx.entries {
-                let text: String = if !e.chinese_tokens.is_empty() {
-                    e.chinese_tokens.join("")
-                } else {
-                    e.concise.clone()
-                };
-                let chars: HashSet<char> = text.chars().collect();
-                let mut score = 0usize;
-                for c in &qchars { if chars.contains(c) { score += 1; } }
-                if score > 0 { scored.push((score, e)); }
+                let s = score_chinese(e, &normalized, &qchars);
+                if s > 0 { scored.push((s, e)); }
             }
         }
 
-        if lang == "en" {
-            scored.sort_by(|a, b| b.0.cmp(&a.0));
-        } else {
-            scored.sort_by(|a, b| b.0.cmp(&a.0).then_with(|| a.1.word.chars().count().cmp(&b.1.word.chars().count())));
-        }
+        scored.sort_by(|a, b| {
+            b.0.cmp(&a.0)
+                .then_with(|| a.1.word.chars().count().cmp(&b.1.word.chars().count()))
+                .then_with(|| a.1.word.cmp(&b.1.word))
+        });
         scored.into_iter().take(limit).map(|(_, e)| WordEntry {
             word: e.word.clone(),
             file_name: e.file_name.clone(),
@@ -360,6 +357,125 @@ fn fuzzy_score(word: &str, query: &str) -> usize {
         let s = score - wlen;
         if s > 0 { s as usize } else { 0 }
     } else { 0 }
+}
+
+/// Question wrappers Chinese users often type when they actually want the
+/// English word: "苹果怎么说", "水的英文是什么". Stripped longest-first.
+const CHINESE_QUERY_NOISE: &[&str] = &[
+    "用英文怎么说",
+    "用英语怎么说",
+    "的英文怎么说",
+    "的英语怎么说",
+    "怎么翻译成英文",
+    "的英文是什么",
+    "的英语是什么",
+    "英文怎么说",
+    "英语怎么说",
+    "怎么翻译",
+    "翻译成英文",
+    "是什么意思",
+    "什么意思",
+    "的英文",
+    "的英语",
+    "怎么说",
+    "英文",
+    "英语",
+    "意思",
+    "翻译",
+];
+
+/// Reduce a Chinese lookup query to its meaningful core, e.g.
+/// "苹果的英文怎么说" -> "苹果". Falls back to every CJK character when the
+/// stripped result would be empty (e.g. the user literally typed "英语").
+fn normalize_chinese_query(raw: &str) -> String {
+    let cjk: String = raw.chars().filter(|c| is_cjk(*c)).collect();
+    if cjk.is_empty() { return cjk; }
+    let mut out = cjk.clone();
+    for _ in 0..3 {
+        let before = out.clone();
+        for noise in CHINESE_QUERY_NOISE {
+            if out.chars().count() > noise.chars().count() && out.contains(noise) {
+                out = out.replace(noise, "");
+            }
+        }
+        out = out.trim_matches('的').trim().to_string();
+        if out == before || out.is_empty() { break; }
+    }
+    if out.is_empty() { cjk } else { out }
+}
+
+fn find_cjk_sub(hay: &[char], needle: &[char]) -> Option<usize> {
+    if needle.is_empty() || needle.len() > hay.len() { return None; }
+    (0..=hay.len() - needle.len()).find(|&i| &hay[i..i + needle.len()] == needle)
+}
+
+/// Score one Chinese text (a token or the concise definition) against the
+/// normalized query. 0 means "no meaningful match".
+fn score_chinese_token(token: &str, query: &str, qchars: &[char]) -> usize {
+    if token.is_empty() || qchars.is_empty() { return 0; }
+    let t: Vec<char> = token.chars().filter(|c| is_cjk(*c)).collect();
+    if t.is_empty() { return 0; }
+    let qlen = qchars.len();
+
+    // Single-character queries are inherently vague: prefer words whose
+    // definition starts with that character.
+    if qlen == 1 {
+        if t[0] == qchars[0] { return 320; }
+        if t.contains(&qchars[0]) { return 200; }
+        return 0;
+    }
+
+    if token == query {
+        return 1000 + 60usize.saturating_sub(t.len());
+    }
+    if t.starts_with(qchars) {
+        return 780 - t.len().min(140);
+    }
+    if let Some(pos) = find_cjk_sub(&t, qchars) {
+        // Longer tokens (sentences) are weaker evidence than a short phrase.
+        return 640 - pos.min(120) - t.len().min(60) / 4;
+    }
+
+    // Partial phrase: count adjacent query bigrams that appear in the token.
+    // Require at least half of them, otherwise a single shared bigram inside a
+    // long example sentence would pull in unrelated words.
+    let total = qlen - 1;
+    let mut hits = 0usize;
+    for w in qchars.windows(2) {
+        if find_cjk_sub(&t, w).is_some() { hits += 1; }
+    }
+    if hits * 2 >= total {
+        let mut s = 140 + 160 * hits / total;
+        if t[0] == qchars[0] { s += 20; }
+        return s;
+    }
+
+    // Last resort: character coverage, but only when most of the query is
+    // present — otherwise any shared common character would match everything.
+    let mut uniq: Vec<char> = Vec::new();
+    for c in qchars { if !uniq.contains(c) { uniq.push(*c); } }
+    let found = uniq.iter().filter(|c| t.contains(c)).count();
+    let cov = found * 100 / uniq.len();
+    if cov >= 60 {
+        let mut s = 60 + cov;
+        if t[0] == qchars[0] { s += 20; }
+        return s;
+    }
+    0
+}
+
+fn score_chinese(entry: &IndexEntry, query: &str, qchars: &[char]) -> usize {
+    let mut best = 0usize;
+    if !entry.concise.is_empty() {
+        // The concise definition carries the primary meaning, so a hit there
+        // should outrank the same hit inside an example sentence.
+        best = best.max(score_chinese_token(&entry.concise, query, qchars) * 5 / 4);
+    }
+    for token in &entry.chinese_tokens {
+        let s = score_chinese_token(token, query, qchars);
+        if s > best { best = s; }
+    }
+    best
 }
 
 fn extract_chinese_tokens(data: &WordDefinition) -> Vec<String> {
@@ -431,4 +547,107 @@ pub fn dict_delete_word(app_state: State<'_, AppState>, word: String) -> bool {
 #[tauri::command]
 pub fn dict_random_word(app_state: State<'_, AppState>) -> Option<WordDefinition> {
     app_state.dict.lock().unwrap().get_random_word()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn entry(word: &str, concise: &str, tokens: &[&str]) -> IndexEntry {
+        IndexEntry {
+            word: word.to_string(),
+            file_name: format!("{word}.json"),
+            concise: concise.to_string(),
+            chinese_tokens: tokens.iter().map(|t| t.to_string()).collect(),
+        }
+    }
+
+    fn zh_chars(q: &str) -> Vec<char> {
+        q.chars().filter(|c| is_cjk(*c)).collect()
+    }
+
+    fn zh_score(e: &IndexEntry, q: &str) -> usize {
+        score_chinese(e, q, &zh_chars(q))
+    }
+
+    #[test]
+    fn chinese_exact_definition_match_wins() {
+        let apple = entry("apple", "苹果", &["苹果", "苹果树"]);
+        let fruit = entry("fruit", "水果", &["水果"]);
+        assert!(zh_score(&apple, "苹果") > 900);
+        // "苹果" must not match a definition that only shares one character.
+        assert_eq!(zh_score(&fruit, "苹果"), 0);
+    }
+
+    #[test]
+    fn chinese_phrase_beats_scattered_characters() {
+        let phrase = entry("pretty", "漂亮的", &["漂亮"]);
+        let scattered = entry("bright", "很亮", &["漂白很亮"]);
+        let phrase_score = zh_score(&phrase, "漂亮");
+        let scattered_score = zh_score(&scattered, "漂亮");
+        assert!(phrase_score > scattered_score);
+        assert!(scattered_score > 0);
+    }
+
+    #[test]
+    fn chinese_question_wrappers_are_stripped() {
+        assert_eq!(normalize_chinese_query("苹果怎么说"), "苹果");
+        assert_eq!(normalize_chinese_query("水的英文是什么"), "水");
+        assert_eq!(normalize_chinese_query("苹果的英文"), "苹果");
+        // A query that is itself a noise word is kept verbatim.
+        assert_eq!(normalize_chinese_query("英语"), "英语");
+        assert_eq!(normalize_chinese_query("翻译"), "翻译");
+    }
+
+    #[test]
+    fn chinese_single_character_prefers_prefix() {
+        let prefixed = entry("water", "水", &["水果"]);
+        let inside = entry("juice", "果汁", &["橙汁水果"]);
+        assert!(zh_score(&prefixed, "水") > zh_score(&inside, "水"));
+    }
+
+    #[test]
+    fn chinese_search_against_real_dictionary_when_available() {
+        // Opt-in: point CDICTIONARY_TEST_DICT at a dictionary folder to run
+        // the full index + search pipeline against real data.
+        let dir = match std::env::var("CDICTIONARY_TEST_DICT") {
+            Ok(d) if std::path::Path::new(&d).is_dir() => d,
+            _ => return,
+        };
+        let mut svc = DictionaryService {
+            dictionary_path: dir,
+            index_path: std::env::temp_dir().join("cdictionary-test-index.json"),
+            index: None,
+        };
+        let count = svc.rebuild(None);
+        assert!(count > 100, "expected a populated dictionary, got {count}");
+
+        let apple = svc.search("苹果", "zh", 5);
+        println!("苹果 -> {:?}", apple.iter().map(|w| w.word.clone()).collect::<Vec<_>>());
+        assert!(apple.iter().any(|w| w.word == "apple"));
+
+        // Question wrappers must resolve to the same headword.
+        let asked = svc.search("苹果的英文怎么说", "zh", 5);
+        println!("苹果的英文怎么说 -> {:?}", asked.iter().map(|w| w.word.clone()).collect::<Vec<_>>());
+        assert!(asked.iter().any(|w| w.word == "apple"));
+
+        let pretty = svc.search("漂亮", "zh", 8);
+        println!("漂亮 -> {:?}", pretty.iter().map(|w| w.word.clone()).collect::<Vec<_>>());
+        assert!(pretty.iter().any(|w| w.word == "pretty"));
+
+        let water = svc.search("水", "zh", 8);
+        println!("水 -> {:?}", water.iter().map(|w| w.word.clone()).collect::<Vec<_>>());
+        assert!(water.iter().any(|w| w.word == "water"));
+
+        // Unrelated Chinese must not resolve to a random word.
+        let none = svc.search("量子纠缠", "zh", 5);
+        println!("量子纠缠 -> {:?}", none.iter().map(|w| w.word.clone()).collect::<Vec<_>>());
+    }
+
+    #[test]
+    fn english_scoring_is_unchanged() {
+        assert_eq!(score_english("apple", "apple"), 1000);
+        assert!(score_english("apple", "app") > score_english("applesauce", "app"));
+        assert_eq!(score_english("apple", "zzz"), 0);
+    }
 }

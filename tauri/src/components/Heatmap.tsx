@@ -110,7 +110,7 @@ export function Heatmap({ data }: HeatmapProps) {
                 <div
                   key={c.key}
                   title={`${c.key}: ${t('heatmap.countLabel', { count: c.count })}`}
-                  className={`w-3.5 h-3.5 rounded-[3px] ${levelClass(c.count)} transition-transform hover:scale-125`}
+                  className={`w-3.5 h-3.5 rounded-sm ${levelClass(c.count)} transition-transform hover:scale-125`}
                 />
               ))}
             </div>
@@ -123,11 +123,11 @@ export function Heatmap({ data }: HeatmapProps) {
 
       <div className="mt-4 flex flex-wrap items-center gap-x-3 gap-y-1.5 text-xs text-slate-400 dark:text-slate-500">
         <span>{t('heatmap.legend')}</span>
-        <span className="inline-flex items-center gap-1.5"><span className="w-3.5 h-3.5 rounded-[3px] hm-cell-empty" />0</span>
-        <span className="inline-flex items-center gap-1.5"><span className="w-3.5 h-3.5 rounded-[3px] hm-l1" />1–10</span>
-        <span className="inline-flex items-center gap-1.5"><span className="w-3.5 h-3.5 rounded-[3px] hm-l2" />11–20</span>
-        <span className="inline-flex items-center gap-1.5"><span className="w-3.5 h-3.5 rounded-[3px] hm-l3" />21–30</span>
-        <span className="inline-flex items-center gap-1.5"><span className="w-3.5 h-3.5 rounded-[3px] hm-l4" />30+</span>
+        <span className="inline-flex items-center gap-1.5"><span className="w-3.5 h-3.5 rounded-sm hm-cell-empty" />0</span>
+        <span className="inline-flex items-center gap-1.5"><span className="w-3.5 h-3.5 rounded-sm hm-l1" />1–10</span>
+        <span className="inline-flex items-center gap-1.5"><span className="w-3.5 h-3.5 rounded-sm hm-l2" />11–20</span>
+        <span className="inline-flex items-center gap-1.5"><span className="w-3.5 h-3.5 rounded-sm hm-l3" />21–30</span>
+        <span className="inline-flex items-center gap-1.5"><span className="w-3.5 h-3.5 rounded-sm hm-l4" />30+</span>
       </div>
     </div>
   );
