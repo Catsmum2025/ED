@@ -42,6 +42,12 @@ fn main() {
                     let _ = window.hide();
                 }
             }
+            // Popups auto-hide when the user clicks away (Electron parity).
+            if window.label().starts_with("popup-") {
+                if let WindowEvent::Focused(false) = event {
+                    let _ = window.hide();
+                }
+            }
         })
         .setup(|app| {
             let handle = app.handle().clone();
@@ -149,7 +155,7 @@ fn main() {
         .run(|app_handle, event| {
             if let RunEvent::Exit = event {
                 // Stop any local model process we started (Electron before-quit parity).
-                if let Ok(st) = app_handle.try_state::<AppState>() {
+                if let Some(st) = app_handle.try_state::<AppState>() {
                     st.local_model.lock().unwrap().stop();
                 }
             }

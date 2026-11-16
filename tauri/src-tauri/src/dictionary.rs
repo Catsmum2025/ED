@@ -370,7 +370,7 @@ fn extract_chinese_tokens(data: &WordDefinition) -> Vec<String> {
     let mut seen: HashSet<String> = HashSet::new();
     let mut tokens: Vec<String> = Vec::new();
     let mut current = String::new();
-    let mut flush = |cur: &mut String, seen: &mut HashSet<String>, tokens: &mut Vec<String>| {
+    let flush = |cur: &mut String, seen: &mut HashSet<String>, tokens: &mut Vec<String>| {
         if cur.chars().count() >= 2 && !seen.contains(cur) {
             seen.insert(cur.clone());
             tokens.push(cur.clone());

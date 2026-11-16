@@ -6,8 +6,10 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use serde_json::{json, Value};
 use tauri::menu::{MenuBuilder, MenuItemBuilder, PredefinedMenuItem};
 use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
-use tauri::{AppHandle, Emitter, Image, Manager, WebviewWindow, WindowEvent};
-use tauri_plugin_global_shortcut::{GlobalShortcutExt, ShortcutState};
+use image::GenericImageView;
+use tauri::image::Image;
+use tauri::{AppHandle, Emitter, Manager, WebviewWindow};
+use tauri_plugin_global_shortcut::{GlobalShortcutExt, Shortcut, ShortcutState};
 
 use crate::settings::KeyboardSettings;
 
@@ -40,43 +42,44 @@ pub fn show_popup(app: &AppHandle, kind: PopupKind) {
         return;
     }
 
-    let mut builder = tauri::WebviewWindowBuilder::new(app, label, tauri::WebviewUrl::App("index.html".into()))
-        .title(kind.title())
-        .inner_size(480.0, kind.height())
-        .min_inner_size(360.0, 80.0)
-        .resizable(true)
-        .maximizable(false)
-        .fullscreenable(false)
-        .decorations(false) // frameless: the popup draws its own title bar
-        .always_on_top(true)
-        .skip_taskbar(false)
-        .visible(false);
-
-    // Popup windows carry their own taskbar icon (Electron parity).
+    // Popup windows carry their own taskbar icon (Electron parity). The image
+    // crate decodes the PNG; tauri gets raw RGBA via Image::new_owned.
+    let mut icon_img: Option<Image> = None;
     if let Some(rd) = crate::state::resource_dir() {
         for candidate in [rd.join("popup-icon.png"), rd.join("resources").join("popup-icon.png")] {
             if candidate.exists() {
-                if let Ok(img) = Image::from_path(&candidate) {
-                    builder = builder.icon(img);
-                    break;
+                match image::open(&candidate) {
+                    Ok(decoded) => {
+                        let (w, h) = decoded.dimensions();
+                        icon_img = Some(Image::new_owned(decoded.to_rgba8().into_raw(), w, h));
+                        break;
+                    }
+                    Err(err) => eprintln!("[popup] 图标加载失败: {}", err),
                 }
             }
         }
     }
 
-    // Auto-hide when the user clicks away - feels like a quick-lookup palette.
-    builder = builder.on_window_event(|w: &WebviewWindow, event: &WindowEvent| {
-        if let WindowEvent::Focused(false) = event {
-            let _ = w.hide();
-        }
-    });
+    let builder = tauri::WebviewWindowBuilder::new(app, label, tauri::WebviewUrl::App("index.html".into()))
+        .title(kind.title())
+        .inner_size(480.0, kind.height())
+        .min_inner_size(360.0, 80.0)
+        .resizable(true)
+        .maximizable(false)
+        .decorations(false) // frameless: the popup draws its own title bar
+        .always_on_top(true)
+        .skip_taskbar(false)
+        .visible(false);
 
     match builder.build() {
         Ok(w) => {
+            if let Some(img) = icon_img {
+                let _ = w.set_icon(img);
+            }
             let _ = w.show();
             let _ = w.set_focus();
         }
-        Err(e) => eprintln!("[popup] 创建失败: {}", e),
+        Err(err) => eprintln!("[popup] 创建失败: {}", err),
     }
 }
 
@@ -103,7 +106,14 @@ pub fn sync_hotkeys(app: &AppHandle, kb: &KeyboardSettings) {
             Some(a) if !a.trim().is_empty() => normalize_accel(a.trim()),
             _ => continue,
         };
-        let result = gs.register_with(accel.clone(), move |app2: &AppHandle, _shortcut, event| {
+        let shortcut = match accel.parse::<Shortcut>() {
+            Ok(s) => s,
+            Err(err) => {
+                eprintln!("[hotkey] 无法解析加速器 {} : {:?}", accel, err);
+                continue;
+            }
+        };
+        let result = gs.on_shortcut(shortcut, move |app2: &AppHandle, _shortcut, event| {
             if matches!(event.state(), ShortcutState::Pressed) {
                 show_popup(app2, kind);
             }
@@ -128,7 +138,7 @@ pub fn build_tray(app: &AppHandle) -> tauri::Result<()> {
         .build()?;
 
     let mut builder = TrayIconBuilder::with_id("main-tray")
-        .menu(app, &menu)?
+        .menu(&menu)
         .tooltip("CDictionary")
         .on_menu_event(|app: &AppHandle, event| {
             let id = event.id().as_ref();

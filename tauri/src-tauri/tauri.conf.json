@@ -33,15 +33,13 @@
   },
   "bundle": {
     "active": true,
-    "targets": ["nsis", "portable"],
+    "targets": ["nsis"],
     "resources": ["resources/dictionary.zip", "resources/popup-icon.png"],
     "icon": ["icons/icon.ico", "icons/icon.png"],
     "category": "Productivity",
     "windows": {
       "nsis": {
         "installMode": "currentUser",
-        "oneClick": false,
-        "allowToChangeInstallationDirectory": true,
         "displayLanguageSelector": false
       }
     }

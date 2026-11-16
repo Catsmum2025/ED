@@ -93,27 +93,27 @@ pub async fn tts_list_voices(app_state: State<'_, AppState>, base_url: Option<St
 }
 
 #[tauri::command]
-pub async fn tts_check_health(app_state: State<'_, AppState>, base_url: Option<String>) -> Value {
+pub async fn tts_check_health(app_state: State<'_, AppState>, base_url: Option<String>) -> Result<Value, String> {
     let url_base = match &base_url { Some(b) if !b.is_empty() => b.clone(), _ => app_state.settings.lock().unwrap().audio.base_url.clone() };
     if url_base.is_empty() {
-        return json!({ "reachable": false, "modelLoaded": false, "message": "未配置地址" });
+        return Ok(json!({ "reachable": false, "modelLoaded": false, "message": "未配置地址" }));
     }
     let url = format!("{}/v1/health", trim_base(&url_base));
     match reqwest::Client::new().get(&url).send().await {
-        Err(e) => json!({ "reachable": false, "modelLoaded": false, "message": e.to_string() }),
+        Err(e) => Ok(json!({ "reachable": false, "modelLoaded": false, "message": e.to_string() })),
         Ok(res) if !res.status().is_success() => {
             let status = res.status().as_u16();
-            json!({ "reachable": false, "modelLoaded": false, "message": format!("服务返回 {}", status) })
+            Ok(json!({ "reachable": false, "modelLoaded": false, "message": format!("服务返回 {}", status) }))
         }
         Ok(res) => {
             let v: Value = res.json().await.unwrap_or(Value::Null);
             let loaded = v.get("model_loaded").and_then(|m| m.as_bool()).unwrap_or(false);
-            json!({
+            Ok(json!({
                 "reachable": true,
                 "modelLoaded": loaded,
                 "version": v.get("version"),
                 "message": if loaded { "服务正常" } else { "服务已启动但模型未加载" },
-            })
+            }))
         }
     }
 }

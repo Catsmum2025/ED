@@ -183,7 +183,7 @@ fn date_key(millis: u64, range: &str) -> String {
                 Weekday::Mon => 0, Weekday::Tue => 1, Weekday::Wed => 2, Weekday::Thu => 3,
                 Weekday::Fri => 4, Weekday::Sat => 5, Weekday::Sun => 6,
             };
-            let monday = dt.date_naive().overflowing_sub_days(chrono::Days::new(num_from_mon as u64)).0;
+            let monday = dt.date_naive().checked_sub_days(chrono::Days::new(num_from_mon as u64)).unwrap_or_else(|| dt.date_naive());
             format!("{:04}-{:02}-{:02}", monday.year(), monday.month(), monday.day())
         }
         "monthly" => format!("{:04}-{:02}", dt.year(), dt.month()),
