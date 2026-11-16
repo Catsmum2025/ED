@@ -1,0 +1,707 @@
+/**
+ * Lightweight i18n: a simple key → string map per locale.
+ * No runtime dependencies — just a Record<string, string> and a t() function.
+ * Keys use dot notation for grouping (e.g. "nav.dictionary", "settings.theme").
+ */
+
+import { useCallback } from 'react';
+import { useSettingsStore } from './store/settings';
+
+type Locale = 'zh-CN' | 'en';
+
+const messages: Record<Locale, Record<string, string>> = {
+  'zh-CN': {
+    // Nav
+    'nav.dictionary': '词典',
+    'nav.translate': '翻译',
+    'nav.books': '词书',
+    'nav.stats': '统计',
+    'nav.settings': '设置',
+
+    // Settings tabs
+    'settings.tabs.general': '通用',
+    'settings.tabs.llm': '大语言模型',
+    'settings.tabs.dictionary': '词典',
+    'settings.tabs.hotkeys': '快捷键',
+    'settings.tabs.audio': '语音',
+    'settings.tabs.experimental': '实验性',
+    'settings.tabs.about': '关于',
+
+    // Settings → General (Appearance)
+    'settings.general.theme': '主题',
+    'settings.general.themeDesc': '选择整体外观和高亮颜色。',
+    'settings.general.mode': '模式',
+    'settings.general.light': '浅色',
+    'settings.general.dark': '深色',
+    'settings.general.system': '跟随系统',
+    'settings.general.accentColor': '强调色',
+    'settings.general.language': '语言',
+    'settings.general.languageDesc': '选择您的首选语言。',
+    'settings.general.displayLanguage': '显示语言',
+    'settings.general.display': '显示',
+    'settings.general.displayDesc': '调整界面缩放和滚动条。',
+    'settings.general.uiScale': 'UI 缩放',
+    'settings.general.hideScrollbar': '隐藏滚动条',
+    'settings.general.hideScrollbarDesc': '隐藏页面滚动条，仍可正常滚动。',
+    'settings.general.systemSection': '系统',
+    'settings.general.systemDesc': '配置开机启动行为。',
+    'settings.general.launchAtLogin': '开机自启动',
+    'settings.general.launchAtLoginDesc': '登录系统时自动启动 CDictionary。',
+
+    // Settings → Dictionary
+    'settings.dict.cacheManagement': '缓存管理',
+    'settings.dict.cacheDesc': '词典数据存储在本地以实现快速查找，无需互联网连接。',
+    'settings.dict.cacheDir': '缓存目录',
+    'settings.dict.cacheDirEmpty': '(未设置)',
+    'settings.dict.entryCount': '词条数',
+    'settings.dict.lastUpdated': '最后更新',
+    'settings.dict.notIndexed': '未索引',
+    'settings.dict.extracting': '解压中…',
+    'settings.dict.extractDict': '解压词库',
+    'settings.dict.uninstalling': '卸载中…',
+    'settings.dict.uninstallDict': '卸载词库',
+    'settings.dict.showInExplorer': '在资源管理器中显示',
+    'settings.dict.pickDir': '选择目录',
+    'settings.dict.noBundledZip': '未检测到内置词库压缩包，请重新安装应用或手动选择词典目录。',
+    'settings.dict.confirmInstall': '将解压内置词库到应用数据目录（约 38 MB），并自动设为当前词典目录。是否继续？',
+    'settings.dict.confirmUninstall': '将删除已解压的词库文件并清除词典路径设置。此操作不可恢复，确定继续吗？',
+    'settings.dict.extractionFailed': '解压失败',
+    'settings.dict.uninstallFailed': '卸载失败',
+    'settings.dict.entriesCount': '{count} 个词条',
+    'settings.dict.removedFiles': '已移除 {count} 个文件',
+
+    // Settings → Word Manager
+    'settings.wordManager.title': '词库管理',
+    'settings.wordManager.desc': '搜索单词并删除误加的词条。删除操作不可恢复。',
+    'settings.wordManager.searchPlaceholder': '搜索单词或中文释义…',
+    'settings.wordManager.clear': '清空',
+    'settings.wordManager.deleteTitle': '删除词条',
+    'settings.wordManager.confirmDelete': '确定删除词条「{word}」吗？此操作不可恢复，将永久移除该单词的数据文件。',
+    'settings.wordManager.deleted': '已删除「{word}」',
+    'settings.wordManager.notFound': '未找到「{word}」',
+    'settings.wordManager.deleteFailed': '删除失败',
+    'settings.wordManager.noMatch': '未找到匹配的词条',
+    'settings.wordManager.searchHint': '支持英文模糊匹配与中文释义检索，输入后显示匹配结果。',
+
+    // Settings → Hotkeys
+    'settings.hotkeys.title': '全局快捷键',
+    'settings.hotkeys.desc': '程序运行时可在任意位置触发的快捷键。组合键必须包含至少一个修饰键（Ctrl / Alt / Shift / Cmd）。Esc 取消录制。',
+    'settings.hotkeys.dictLabel': '呼出查词小窗',
+    'settings.hotkeys.dictDesc': '弹出搜索框，输入单词查词，可一键切到主窗口查看完整释义。',
+    'settings.hotkeys.translateLabel': '呼出翻译小窗',
+    'settings.hotkeys.translateDesc': '弹出翻译框，输入文本即时翻译，可切到主窗口继续操作。',
+
+    // Settings → Audio
+    'settings.audio.title': '语音朗读',
+    'settings.audio.desc': '集成 IndexTTS（OpenAI 兼容 API）实现单词和例句的自然语音朗读。',
+    'settings.audio.enable': '启用语音',
+    'settings.audio.enableDesc': '在单词卡片和翻译结果旁显示朗读按钮。',
+    'settings.audio.engine': '引擎',
+    'settings.audio.browser': '浏览器内置',
+    'settings.audio.indextts': 'IndexTTS',
+    'settings.audio.indexttsUrl': 'IndexTTS 服务地址',
+    'settings.audio.testConn': '测试连接',
+    'settings.audio.voice': '音色',
+    'settings.audio.voiceLoading': '加载中…',
+    'settings.audio.voiceEmpty': '(未获取)',
+    'settings.audio.rate': '语速',
+    'settings.audio.preview': '试听示例',
+    'settings.audio.browserNote': '使用浏览器内置 Web Speech API，无需启动外部服务，但音色较机械。',
+
+    // Settings → LLM
+    'settings.llm.connection': '提供商连接',
+    'settings.llm.connectionDesc': '配置您的大语言模型端点的基础 URL 和身份验证。',
+    'settings.llm.baseUrl': '基础 URL',
+    'settings.llm.apiKey': 'API 密钥',
+    'settings.llm.optional': '可选',
+    'settings.llm.model': '模型',
+    'settings.llm.prefixPrompt': '前置提示词',
+    'settings.llm.prefixPromptNote': '作为系统指令发送给模型（不会和原文混在一起被回显）。支持占位符 {dir}（自动替换为「中文」或「英文」，由输入语言决定方向）。留空则使用内置默认指令。',
+    'settings.llm.apply': '应用',
+    'settings.llm.reset': '还原',
+    'settings.llm.loadModelsHint': '填写基础 URL 和 API 密钥后，从提供商加载可用模型。',
+    'settings.llm.loadModels': '加载模型列表',
+    'settings.llm.testConn': '测试连接',
+    'settings.llm.testing': '测试中...',
+    'settings.llm.localModel': '本地模型',
+    'settings.llm.localModelDesc': '软件启动时自动拉起本地模型进程，退出时自动清理。优先执行启动脚本，未设置时回退到启动命令。',
+    'settings.llm.startupScript': '启动脚本（.bat / .cmd）',
+    'settings.llm.scriptPlaceholder': '点击右侧选择脚本，或直接粘贴路径',
+    'settings.llm.select': '选择',
+    'settings.llm.clear': '清除',
+    'settings.llm.startupCmd': '启动命令（备选）',
+    'settings.llm.cmdPlaceholder': '例如：ollama serve    或    llama-server -m model.gguf --port 8080',
+    'settings.llm.scriptNote': '脚本优先于命令；两者都为空时不自动启动。脚本路径含空格也能正常执行。',
+    'settings.llm.start': '启动',
+    'settings.llm.stop': '停止',
+    'settings.llm.refreshStatus': '刷新状态',
+    'settings.llm.running': '运行中',
+    'settings.llm.stopped': '未运行',
+    'settings.llm.stillRunning': '仍在运行',
+
+    // Settings → Experimental
+    'settings.experimental.title': '实验性功能',
+    'settings.experimental.desc': '这些功能仍在试验阶段，效果取决于模型能力，可能需要额外配置。',
+    'settings.experimental.aiWordGen': 'AI 生成词条',
+    'settings.experimental.aiWordGenDesc': '在词库未命中时，调用大模型生成结构化释义并写入本地词库。生成内容由模型决定，可能存在偏差；建议配合较大参数的模型使用。',
+
+    // Settings → About
+    'settings.about.title': '关于',
+    'settings.about.desc': 'CDictionary 是一款极简本地英汉词典与翻译应用。',
+    'settings.about.version': '版本',
+    'settings.about.offline': '所有数据均保存在本地，无需联网即可查词。',
+    'settings.about.translateNote': '翻译功能通过 OpenAI 兼容 API 调用本地或远程大语言模型。',
+
+    // Popup Frame
+    'popup.switchToMain': '切换到主程序',
+    'popup.close': '关闭',
+
+    // Popup Dict
+    'popup.dict.title': '查词小窗',
+    'popup.dict.placeholder': '输入单词查词…',
+    'popup.dict.emptyHint': '输入单词后回车查词 · Esc 关闭',
+
+    // Popup Translate
+    'popup.translate.title': '翻译小窗',
+    'popup.translate.placeholder': '输入文本翻译…',
+    'popup.translate.translate': '翻译',
+    'popup.translate.translating': '翻译中…',
+    'popup.translate.result': '翻译结果',
+    'popup.translate.copy': '复制',
+    'popup.translate.copied': '已复制',
+    'popup.translate.error': '[错误]',
+    'popup.translate.noModel': '请先在设置中配置大语言模型',
+    'popup.translate.hint': '输入文本后点击翻译 · Esc 关闭',
+
+    // Dictionary page
+    'dict.searchPlaceholder': '搜索单词或释义…',
+    'dict.search': '搜索',
+    'dict.notFoundPrefix': '词库中未找到「',
+    'dict.notFoundSuffix': '」',
+    'dict.aiGenOffer': '可调用大模型生成结构化释义并加入词库（实验性功能）。',
+    'dict.aiGenNeedConfig': '需先在「设置 → 大语言模型」中配置 API 地址与模型。',
+    'dict.aiGenEnableHint': '可在「设置 → 实验性功能」中开启 AI 生成词条能力。',
+    'dict.aiGenButton': '用 AI 生成并加入词库',
+    'dict.aiGenGenerating': '正在生成…',
+    'dict.randomTitle': '每日随机 · 点击卡片查看完整释义',
+    'dict.nextRandom': '换一个',
+    'dict.nextRandomAlt': '换一个随机词',
+    'dict.emptyTitle': '输入单词以查看其定义',
+    'dict.emptySubtitle': '支持英文模糊匹配与中文释义检索',
+    'dict.addToBook': '加入词书',
+    'dict.newBookPlaceholder': '新建词书…',
+    'dict.newBookCreate': '新建并加入',
+    'dict.noCustomBooks': '还没有自建词书，在下方新建一本。',
+    'dict.words': '词',
+    'dict.inBook': '',
+    'dict.favorited': '取消收藏',
+    'dict.notFavorited': '收藏到「我的关注」',
+    'dict.speakWord': '朗读单词',
+    'dict.copyWord': '复制单词',
+    'dict.speakExample': '朗读例句',
+    'dict.synonyms': '近义词辨析',
+
+    // Translate page
+    'translate.title': '翻译',
+    'translate.subtitle': '输入中文或英文，调用大模型即时翻译。',
+    'translate.inputLabel': '输入文本',
+    'translate.noModel': '请先加载模型',
+    'translate.placeholder': '输入中文或英文…',
+    'translate.button': '翻译',
+    'translate.translating': '翻译中...',
+    'translate.resultLabel': '翻译结果',
+    'translate.speakResult': '朗读译文',
+    'translate.copy': '复制',
+
+    // Stats page
+    'stats.title': '统计',
+    'stats.subtitle': '查看您的词典使用情况并导出学习材料。',
+    'stats.exportLearned': '导出已学单词',
+    'stats.exportQueries': '导出查询次数',
+    'stats.heatmap': '学习热力图',
+    'stats.heatmapDesc': '按月展示每天的查词活动，颜色越深查询越多。默认显示近 4 个月，可展开查看全部记录。',
+    'stats.topWords': '热门单词',
+    'stats.topWordsDesc': '所有时间内频率最高的单词。',
+    'stats.noRecords': '还没有查词记录，去词典页查几个单词吧。',
+    'stats.word': '单词',
+    'stats.queryCount': '查询次数',
+    'stats.lastQuery': '最后查询',
+    'stats.deleteRecord': '删除记录',
+    'stats.justNow': '刚刚',
+    'stats.minutesAgo': '{n} 分钟前',
+    'stats.hoursAgo': '{n} 小时前',
+    'stats.daysAgo': '{n} 天前',
+
+    // Books page
+    'books.title': '词书',
+    'books.subtitle': '共 {bookCount} 本词书 · 收录 {wordCount} 个单词。点击书本查看详情。',
+    'books.newBook': '新建词书',
+    'books.newBookTitle': '新建词书',
+    'books.newBookName': '词书名称',
+    'books.newBookPlaceholder': '例如：考研核心词、托福词汇…',
+    'books.create': '创建',
+    'books.cancel': '取消',
+    'books.loading': '加载中…',
+    'books.noBooks': '还没有词书',
+    'books.default': '默认',
+    'books.wordsCount': '{count} 个单词',
+    'books.updatedAt': '更新于 {time}',
+    'books.edit': '编辑',
+    'books.delete': '删除',
+    'books.bookNamePlaceholder': '词书名称',
+    'books.save': '保存',
+    'books.cover': '封面',
+    'books.confirmDelete': '确定删除词书「{name}」吗？\n词书内的单词会从该词书中移除（不影响其他词书与统计）。',
+    'books.deletedOrGone': '词书不存在或已被删除。',
+    'books.backToList': '返回词书列表',
+    'books.backToBook': '返回词书',
+    'books.createdAt': '创建于 {date}',
+    'books.startFlashcards': '开始闪卡学习',
+    'books.wordList': '单词列表',
+    'books.emptyBook': '这本词书还没有单词。',
+    'books.addByFav': '在查词页面点 ❤ 收藏单词，会自动加入这本词书。',
+    'books.addByMenu': '在查词页面点「加入词书」即可把单词加入这本词书。',
+    'books.addedAt': '加入',
+    'books.removeFromBook': '移出词书',
+    'books.today': '今天',
+
+    // Flashcards
+    'flash.noBook': '未指定词书',
+    'flash.bookGone': '词书不存在或已被删除',
+    'flash.emptyBook': '这本词书还没有单词，先去查词页面加入一些单词吧。',
+    'flash.noDefinitions': '词书中的单词都未在词典中找到完整释义。',
+    'flash.loadingWords': '正在加载单词…',
+    'flash.backToBook': '返回词书',
+    'flash.backToList': '回词书列表',
+    'flash.complete': '完成！',
+    'flash.completeDesc': '你已完成「{name}」的 {count} 个单词',
+    'flash.correct': '答对',
+    'flash.accuracy': '正确率',
+    'flash.wrongWords': '答错的单词（{count}）',
+    'flash.restart': '重新学习',
+    'flash.cardMode': '闪卡',
+    'flash.quizMode': '选意',
+    'flash.needMore': '至少需要 4 个单词',
+    'flash.shuffle': '打乱',
+    'flash.shuffleTitle': '打乱顺序重新开始',
+    'flash.speakWord': '朗读单词',
+
+    // Common
+    'common.speak': '朗读',
+
+    // Extraction progress
+    'extraction.title': '解压词库',
+    'extraction.phase.extract': '正在解压',
+    'extraction.phase.move': '整理文件',
+    'extraction.phase.index': '建立索引',
+    'extraction.background': '后台运行',
+    'extraction.done': '解压完成',
+    'extraction.doneDesc': '词库已就绪，共 {count} 个词条。',
+    'extraction.error': '解压失败',
+    'extraction.blockedTip': '词库正在解压，请稍候…',
+    'extraction.viewProgress': '查看进度',
+    'extraction.close': '关闭',
+
+    // Heatmap
+    'heatmap.noRecords': '暂无查词记录，开始查词后会在这里显示。',
+    'heatmap.totalQueries': '共 {count} 次查询',
+    'heatmap.showUntil': '显示到 {date}',
+    'heatmap.collapse': '收起',
+    'heatmap.expandAll': '查看全部',
+    'heatmap.countLabel': '{count} 次',
+    'heatmap.thisMonth': '本月',
+    'heatmap.legend': '图例',
+
+    // StatCard
+    'stat.learnedWords': '已学单词',
+    'stat.learnedDesc': '已学习 {count} 个单词。',
+    'stat.totalQueries': '总查询次数',
+    'stat.totalQueriesDesc': '已查询 {count} 次。',
+    'stat.topWord': '最常查询',
+    'stat.topWordDesc': '查询次数最多的单词。',
+
+    // ErrorBoundary
+    'error.renderError': '页面渲染出错',
+    'error.reload': '重新加载',
+
+    // HotkeyRecorder
+    'hotkey.clear': '清除快捷键',
+    'hotkey.pressing': '按下组合键…',
+    'hotkey.record': '录制快捷键',
+
+    // Flashcards extended
+    'flash.tapToFlip': '点击卡片或按空格键翻转',
+    'flash.prev': '上一个',
+    'flip': '翻转',
+    'flipBack': '翻回',
+    'flash.next': '下一个',
+    'flash.done': '完成',
+    'flash.correctWait': '答对了，即将进入下一题…',
+    'flash.correctCount': '已答对 {count}',
+  },
+
+  'en': {
+    // Nav
+    'nav.dictionary': 'Dictionary',
+    'nav.translate': 'Translate',
+    'nav.books': 'Books',
+    'nav.stats': 'Stats',
+    'nav.settings': 'Settings',
+
+    // Settings tabs
+    'settings.tabs.general': 'General',
+    'settings.tabs.llm': 'LLM',
+    'settings.tabs.dictionary': 'Dictionary',
+    'settings.tabs.hotkeys': 'Hotkeys',
+    'settings.tabs.audio': 'Audio',
+    'settings.tabs.experimental': 'Experimental',
+    'settings.tabs.about': 'About',
+
+    // Settings → General
+    'settings.general.theme': 'Theme',
+    'settings.general.themeDesc': 'Choose the overall appearance and accent color.',
+    'settings.general.mode': 'Mode',
+    'settings.general.light': 'Light',
+    'settings.general.dark': 'Dark',
+    'settings.general.system': 'System',
+    'settings.general.accentColor': 'Accent Color',
+    'settings.general.language': 'Language',
+    'settings.general.languageDesc': 'Choose your preferred language.',
+    'settings.general.displayLanguage': 'Display Language',
+    'settings.general.display': 'Display',
+    'settings.general.displayDesc': 'Adjust UI scaling and scrollbar visibility.',
+    'settings.general.uiScale': 'UI Scale',
+    'settings.general.hideScrollbar': 'Hide Scrollbars',
+    'settings.general.hideScrollbarDesc': 'Hide scrollbars on pages. Scrolling still works via mouse, trackpad, or keyboard.',
+    'settings.general.systemSection': 'System',
+    'settings.general.systemDesc': 'Configure startup behavior.',
+    'settings.general.launchAtLogin': 'Launch at Login',
+    'settings.general.launchAtLoginDesc': 'Automatically start CDictionary when you log in.',
+
+    // Settings → Dictionary
+    'settings.dict.cacheManagement': 'Cache Management',
+    'settings.dict.cacheDesc': 'Dictionary data is stored locally for fast lookups without an internet connection.',
+    'settings.dict.cacheDir': 'Cache Directory',
+    'settings.dict.cacheDirEmpty': '(Not set)',
+    'settings.dict.entryCount': 'Entries',
+    'settings.dict.lastUpdated': 'Last Updated',
+    'settings.dict.notIndexed': 'Not indexed',
+    'settings.dict.extracting': 'Extracting…',
+    'settings.dict.extractDict': 'Extract Dictionary',
+    'settings.dict.uninstalling': 'Uninstalling…',
+    'settings.dict.uninstallDict': 'Uninstall Dictionary',
+    'settings.dict.showInExplorer': 'Show in File Explorer',
+    'settings.dict.pickDir': 'Choose Directory',
+    'settings.dict.noBundledZip': 'No bundled dictionary zip found. Please reinstall the app or choose a dictionary directory manually.',
+    'settings.dict.confirmInstall': 'This will extract the bundled dictionary to the app data directory (~38 MB) and set it as the current dictionary path. Continue?',
+    'settings.dict.confirmUninstall': 'This will delete the extracted dictionary files and clear the dictionary path setting. This cannot be undone. Continue?',
+    'settings.dict.extractionFailed': 'Extraction failed',
+    'settings.dict.uninstallFailed': 'Uninstall failed',
+    'settings.dict.entriesCount': '{count} entries',
+    'settings.dict.removedFiles': '{count} files removed',
+
+    // Settings → Word Manager
+    'settings.wordManager.title': 'Word Manager',
+    'settings.wordManager.desc': 'Search and delete mistakenly added entries. Deletion is permanent.',
+    'settings.wordManager.searchPlaceholder': 'Search words or definitions…',
+    'settings.wordManager.clear': 'Clear',
+    'settings.wordManager.deleteTitle': 'Delete Entry',
+    'settings.wordManager.confirmDelete': 'Delete the entry "{word}"? This cannot be undone — the data file will be permanently removed.',
+    'settings.wordManager.deleted': 'Deleted "{word}"',
+    'settings.wordManager.notFound': '"{word}" not found',
+    'settings.wordManager.deleteFailed': 'Delete failed',
+    'settings.wordManager.noMatch': 'No matching entries found',
+    'settings.wordManager.searchHint': 'Supports English fuzzy matching and Chinese definition search.',
+
+    // Settings → Hotkeys
+    'settings.hotkeys.title': 'Global Hotkeys',
+    'settings.hotkeys.desc': 'Keyboard shortcuts that work anywhere while the app is running. Each shortcut must include at least one modifier (Ctrl / Alt / Shift / Cmd). Press Esc to cancel recording.',
+    'settings.hotkeys.dictLabel': 'Dictionary Popup',
+    'settings.hotkeys.dictDesc': 'Open a search popup to look up words. You can switch to the main window for full details.',
+    'settings.hotkeys.translateLabel': 'Translate Popup',
+    'settings.hotkeys.translateDesc': 'Open a translation popup. Switch to the main window to continue working.',
+
+    // Settings → Audio
+    'settings.audio.title': 'Text-to-Speech',
+    'settings.audio.desc': 'Integrated IndexTTS (OpenAI-compatible API) for natural speech playback of words and examples.',
+    'settings.audio.enable': 'Enable Speech',
+    'settings.audio.enableDesc': 'Show speak buttons next to word cards and translation results.',
+    'settings.audio.engine': 'Engine',
+    'settings.audio.browser': 'Browser Built-in',
+    'settings.audio.indextts': 'IndexTTS',
+    'settings.audio.indexttsUrl': 'IndexTTS Service URL',
+    'settings.audio.testConn': 'Test Connection',
+    'settings.audio.voice': 'Voice',
+    'settings.audio.voiceLoading': 'Loading…',
+    'settings.audio.voiceEmpty': '(Not loaded)',
+    'settings.audio.rate': 'Speed',
+    'settings.audio.preview': 'Preview',
+    'settings.audio.browserNote': 'Uses the browser\'s built-in Web Speech API. No external service needed, but the voice sounds robotic.',
+
+    // Settings → LLM
+    'settings.llm.connection': 'Provider Connection',
+    'settings.llm.connectionDesc': 'Configure the base URL and authentication for your LLM endpoint.',
+    'settings.llm.baseUrl': 'Base URL',
+    'settings.llm.apiKey': 'API Key',
+    'settings.llm.optional': 'Optional',
+    'settings.llm.model': 'Model',
+    'settings.llm.prefixPrompt': 'Prefix Prompt',
+    'settings.llm.prefixPromptNote': 'Sent as a system instruction (not mixed with user content). Supports the {dir} placeholder (auto-replaced with "Chinese" or "English" based on input language). Leave empty to use the built-in default.',
+    'settings.llm.apply': 'Apply',
+    'settings.llm.reset': 'Reset',
+    'settings.llm.loadModelsHint': 'Fill in the base URL and API key, then load available models from the provider.',
+    'settings.llm.loadModels': 'Load Models',
+    'settings.llm.testConn': 'Test Connection',
+    'settings.llm.testing': 'Testing...',
+    'settings.llm.localModel': 'Local Model',
+    'settings.llm.localModelDesc': 'Automatically launch a local model process on startup and clean up on exit. Startup scripts take priority over command lines.',
+    'settings.llm.startupScript': 'Startup Script (.bat / .cmd)',
+    'settings.llm.scriptPlaceholder': 'Click to browse or paste a path',
+    'settings.llm.select': 'Browse',
+    'settings.llm.clear': 'Clear',
+    'settings.llm.startupCmd': 'Startup Command (fallback)',
+    'settings.llm.cmdPlaceholder': 'e.g. ollama serve    or    llama-server -m model.gguf --port 8080',
+    'settings.llm.scriptNote': 'Scripts take priority over commands. If both are empty, no model is launched. Paths with spaces work fine.',
+    'settings.llm.start': 'Start',
+    'settings.llm.stop': 'Stop',
+    'settings.llm.refreshStatus': 'Refresh Status',
+    'settings.llm.running': 'Running',
+    'settings.llm.stopped': 'Stopped',
+    'settings.llm.stillRunning': 'Still running',
+
+    // Settings → Experimental
+    'settings.experimental.title': 'Experimental Features',
+    'settings.experimental.desc': 'These features are still experimental. Results depend on model capability and may require extra configuration.',
+    'settings.experimental.aiWordGen': 'AI Word Generation',
+    'settings.experimental.aiWordGenDesc': 'When a word is not found, generate a structured entry via LLM and save it to the local dictionary. Generated content depends on the model and may be inaccurate. Larger models are recommended.',
+
+    // Settings → About
+    'settings.about.title': 'About',
+    'settings.about.desc': 'CDictionary is a minimal local English-Chinese dictionary and translation app.',
+    'settings.about.version': 'Version',
+    'settings.about.offline': 'All data is stored locally. No internet connection required for lookups.',
+    'settings.about.translateNote': 'Translation uses an OpenAI-compatible API to call local or remote LLMs.',
+
+    // Popup Frame
+    'popup.switchToMain': 'Switch to Main',
+    'popup.close': 'Close',
+
+    // Popup Dict
+    'popup.dict.title': 'Dictionary',
+    'popup.dict.placeholder': 'Type a word to look up…',
+    'popup.dict.emptyHint': 'Enter a word and press Enter · Esc to close',
+
+    // Popup Translate
+    'popup.translate.title': 'Translate',
+    'popup.translate.placeholder': 'Enter text to translate…',
+    'popup.translate.translate': 'Translate',
+    'popup.translate.translating': 'Translating…',
+    'popup.translate.result': 'Translation',
+    'popup.translate.copy': 'Copy',
+    'popup.translate.copied': 'Copied',
+    'popup.translate.error': '[Error]',
+    'popup.translate.noModel': 'Configure an LLM in Settings first',
+    'popup.translate.hint': 'Enter text and click Translate · Esc to close',
+
+    // Dictionary page
+    'dict.searchPlaceholder': 'Search words or definitions…',
+    'dict.search': 'Search',
+    'dict.notFoundPrefix': 'Not found in dictionary: ',
+    'dict.notFoundSuffix': '',
+    'dict.aiGenOffer': 'Generate a structured entry via LLM and add it to the dictionary (experimental).',
+    'dict.aiGenNeedConfig': 'Configure the API URL and model in Settings → LLM first.',
+    'dict.aiGenEnableHint': 'Enable AI word generation in Settings → Experimental.',
+    'dict.aiGenButton': 'Generate with AI & Add',
+    'dict.aiGenGenerating': 'Generating…',
+    'dict.randomTitle': 'Random Word · Click card for full details',
+    'dict.nextRandom': 'Next',
+    'dict.nextRandomAlt': 'Next random word',
+    'dict.emptyTitle': 'Enter a word to view its definition',
+    'dict.emptySubtitle': 'Supports English fuzzy matching and Chinese definition search',
+    'dict.addToBook': 'Add to Book',
+    'dict.newBookPlaceholder': 'New book…',
+    'dict.newBookCreate': 'Create & Add',
+    'dict.noCustomBooks': 'No custom books yet. Create one below.',
+    'dict.words': 'words',
+    'dict.inBook': '',
+    'dict.favorited': 'Remove from favorites',
+    'dict.notFavorited': 'Add to favorites',
+    'dict.speakWord': 'Speak word',
+    'dict.copyWord': 'Copy word',
+    'dict.speakExample': 'Speak example',
+    'dict.synonyms': 'Synonym Comparison',
+
+    // Translate page
+    'translate.title': 'Translate',
+    'translate.subtitle': 'Enter Chinese or English text for instant LLM-powered translation.',
+    'translate.inputLabel': 'Input Text',
+    'translate.noModel': 'Load a model first',
+    'translate.placeholder': 'Enter Chinese or English…',
+    'translate.button': 'Translate',
+    'translate.translating': 'Translating...',
+    'translate.resultLabel': 'Translation',
+    'translate.speakResult': 'Speak translation',
+    'translate.copy': 'Copy',
+
+    // Stats page
+    'stats.title': 'Stats',
+    'stats.subtitle': 'View your dictionary usage and export learning materials.',
+    'stats.exportLearned': 'Export Learned Words',
+    'stats.exportQueries': 'Export Query Counts',
+    'stats.heatmap': 'Learning Heatmap',
+    'stats.heatmapDesc': 'Daily lookup activity by month. Darker cells mean more lookups. Shows the last 4 months by default — expand to see all.',
+    'stats.topWords': 'Top Words',
+    'stats.topWordsDesc': 'Most frequently looked-up words of all time.',
+    'stats.noRecords': 'No lookups yet. Try searching some words!',
+    'stats.word': 'Word',
+    'stats.queryCount': 'Queries',
+    'stats.lastQuery': 'Last Lookup',
+    'stats.deleteRecord': 'Delete record',
+    'stats.justNow': 'just now',
+    'stats.minutesAgo': '{n}m ago',
+    'stats.hoursAgo': '{n}h ago',
+    'stats.daysAgo': '{n}d ago',
+
+    // Books page
+    'books.title': 'Books',
+    'books.subtitle': '{bookCount} books · {wordCount} words. Click a book to view details.',
+    'books.newBook': 'New Book',
+    'books.newBookTitle': 'New Book',
+    'books.newBookName': 'Book Name',
+    'books.newBookPlaceholder': 'e.g. GRE Vocabulary, IELTS Core…',
+    'books.create': 'Create',
+    'books.cancel': 'Cancel',
+    'books.loading': 'Loading…',
+    'books.noBooks': 'No books yet',
+    'books.default': 'Default',
+    'books.wordsCount': '{count} words',
+    'books.updatedAt': 'Updated {time}',
+    'books.edit': 'Edit',
+    'books.delete': 'Delete',
+    'books.bookNamePlaceholder': 'Book name',
+    'books.save': 'Save',
+    'books.cover': 'Cover',
+    'books.confirmDelete': 'Delete the book "{name}"?\nWords will be removed from this book (other books and stats are unaffected).',
+    'books.deletedOrGone': 'Book not found or has been deleted.',
+    'books.backToList': 'Back to Books',
+    'books.backToBook': 'Back to Book',
+    'books.createdAt': 'Created {date}',
+    'books.startFlashcards': 'Start Flashcards',
+    'books.wordList': 'Word List',
+    'books.emptyBook': 'This book has no words yet.',
+    'books.addByFav': 'Tap ❤ on the dictionary page to add words to this book.',
+    'books.addByMenu': 'Tap "Add to Book" on the dictionary page to add words here.',
+    'books.addedAt': 'added',
+    'books.removeFromBook': 'Remove from book',
+    'books.today': 'Today',
+
+    // Flashcards
+    'flash.noBook': 'No book specified',
+    'flash.bookGone': 'Book not found or has been deleted',
+    'flash.emptyBook': 'This book has no words. Add some from the dictionary page first.',
+    'flash.noDefinitions': 'None of the words in this book have full definitions in the dictionary.',
+    'flash.loadingWords': 'Loading words…',
+    'flash.backToBook': 'Back to Book',
+    'flash.backToList': 'Back to Books',
+    'flash.complete': 'Done!',
+    'flash.completeDesc': 'You completed {count} words in "{name}"',
+    'flash.correct': 'Correct',
+    'flash.accuracy': 'Accuracy',
+    'flash.wrongWords': 'Wrong answers ({count})',
+    'flash.restart': 'Restart',
+    'flash.cardMode': 'Cards',
+    'flash.quizMode': 'Quiz',
+    'flash.needMore': 'Need at least 4 words',
+    'flash.shuffle': 'Shuffle',
+    'flash.shuffleTitle': 'Shuffle and restart',
+    'flash.speakWord': 'Speak word',
+
+    // Common
+    'common.speak': 'Speak',
+
+    // Extraction progress
+    'extraction.title': 'Extracting Dictionary',
+    'extraction.phase.extract': 'Extracting',
+    'extraction.phase.move': 'Organizing files',
+    'extraction.phase.index': 'Building index',
+    'extraction.background': 'Run in background',
+    'extraction.done': 'Extraction Complete',
+    'extraction.doneDesc': 'Dictionary is ready — {count} entries.',
+    'extraction.error': 'Extraction Failed',
+    'extraction.blockedTip': 'Dictionary is being extracted, please wait…',
+    'extraction.viewProgress': 'View progress',
+    'extraction.close': 'Close',
+
+    // Heatmap
+    'heatmap.noRecords': 'No lookups yet. Start searching and activity will appear here.',
+    'heatmap.totalQueries': '{count} total lookups',
+    'heatmap.showUntil': 'shown until {date}',
+    'heatmap.collapse': 'Collapse',
+    'heatmap.expandAll': 'Show All',
+    'heatmap.countLabel': '{count} lookups',
+    'heatmap.thisMonth': 'This month',
+    'heatmap.legend': 'Legend',
+
+    // StatCard
+    'stat.learnedWords': 'Learned Words',
+    'stat.learnedDesc': '{count} words learned.',
+    'stat.totalQueries': 'Total Queries',
+    'stat.totalQueriesDesc': '{count} queries made.',
+    'stat.topWord': 'Top Word',
+    'stat.topWordDesc': 'Most frequently looked-up word.',
+
+    // ErrorBoundary
+    'error.renderError': 'Rendering Error',
+    'error.reload': 'Reload',
+
+    // HotkeyRecorder
+    'hotkey.clear': 'Clear shortcut',
+    'hotkey.pressing': 'Press a combination…',
+    'hotkey.record': 'Record Shortcut',
+
+    // Flashcards extended
+    'flash.tapToFlip': 'Tap card or press Space to flip',
+    'flash.prev': 'Previous',
+    'flip': 'Flip',
+    'flipBack': 'Flip back',
+    'flash.next': 'Next',
+    'flash.done': 'Done',
+    'flash.correctWait': 'Correct! Moving to next…',
+    'flash.correctCount': '{count} correct',
+  },
+};
+
+/** Translate a key, with optional interpolation: t('key', { count: 5 }) */
+export function t(key: string, params?: Record<string, string | number>): string {
+  const lang = useSettingsStore.getState().language as Locale;
+  const dict = messages[lang] || messages['zh-CN'];
+  let text = dict[key] ?? messages['zh-CN'][key] ?? key;
+  if (params) {
+    for (const [k, v] of Object.entries(params)) {
+      text = text.replace(new RegExp(`\\{${k}\\}`, 'g'), String(v));
+    }
+  }
+  return text;
+}
+
+/**
+ * React hook version of t(): subscribes to language changes so components
+ * re-render when the user switches language in settings.
+ * Usage: const t = useT(); t('key', { count: 5 });
+ */
+export function useT() {
+  const lang = useSettingsStore((s) => s.language) as Locale;
+  return useCallback(
+    (key: string, params?: Record<string, string | number>): string => {
+      const dict = messages[lang] || messages['zh-CN'];
+      let text = dict[key] ?? messages['zh-CN'][key] ?? key;
+      if (params) {
+        for (const [k, v] of Object.entries(params)) {
+          text = text.replace(new RegExp(`\\{${k}\\}`, 'g'), String(v));
+        }
+      }
+      return text;
+    },
+    [lang]
+  );
+}

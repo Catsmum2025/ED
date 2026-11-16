@@ -1,0 +1,49 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "CDictionary",
+  "version": "0.1.0",
+  "identifier": "com.ahpx.cdictionary",
+  "build": {
+    "beforeDevCommand": "pnpm dev",
+    "devUrl": "http://localhost:1420",
+    "beforeBuildCommand": "pnpm build",
+    "frontendDist": "../dist"
+  },
+  "app": {
+    "windows": [
+      {
+        "label": "main",
+        "title": "CDictionary",
+        "width": 1100,
+        "height": 760,
+        "minWidth": 720,
+        "minHeight": 480,
+        "backgroundColor": "#ffffff",
+        "resizable": true,
+        "visible": true
+      }
+    ],
+    "security": {
+      "csp": null,
+      "assetProtocol": {
+        "enable": true,
+        "scope": ["$APPDATA/tts-cache/**"]
+      }
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": ["nsis", "portable"],
+    "resources": ["resources/dictionary.zip", "resources/popup-icon.png"],
+    "icon": ["icons/icon.ico", "icons/icon.png"],
+    "category": "Productivity",
+    "windows": {
+      "nsis": {
+        "installMode": "currentUser",
+        "oneClick": false,
+        "allowToChangeInstallationDirectory": true,
+        "displayLanguageSelector": false
+      }
+    }
+  }
+}
