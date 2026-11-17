@@ -485,4 +485,28 @@ mod tests {
         assert!(svc.get_word("apple").is_some(), "apple not readable after pack import");
         let _ = fs::remove_dir_all(&dir);
     }
+
+    /// Opt-in full-pack import: set EDICT_TEST_PACK to resources/ecdict.jsonl.gz.
+    /// Writes 770k per-word files into a temp dir and builds the index, which is
+    /// exactly what the bundled install does (minus settings/events).
+    #[test]
+    #[ignore]
+    fn imports_full_ecdict_pack_when_available() {
+        let pack = match std::env::var("EDICT_TEST_PACK") {
+            Ok(p) if std::path::Path::new(&p).is_file() => p,
+            _ => {
+                println!("EDICT_TEST_PACK is not set; skipping");
+                return;
+            }
+        };
+        let dest = std::env::temp_dir().join("edict-full-pack-test");
+        let started = std::time::Instant::now();
+        let rows = import_jsonl_gz(&pack, &dest, &|_p, _c, _t| {}).expect("import full pack");
+        println!("imported {} rows in {:?}", rows.len(), started.elapsed());
+        assert!(rows.len() > 760_000, "expected ~770k rows, got {}", rows.len());
+        let idx = dictionary::finalize_index(dest.to_str().unwrap(), rows);
+        println!("indexed {} entries", idx.count());
+        assert!(idx.count() > 760_000);
+        let _ = fs::remove_dir_all(&dest);
+    }
 }

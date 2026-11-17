@@ -5,10 +5,12 @@
 ## 1. 当前状态快照（2026-11-17）
 - **项目已更名为 ED**（原 CDictionary）：包名 `ed`、identifier `com.ahpx.ed`、窗口/托盘标题 `ED`、产物 `ED_0.1.0_x64-setup.exe` / `ED-0.1.0-Portable.zip`、自检环境变量 `ED_SELFTEST=install`、中文反查测试字典变量 `ED_TEST_DICT`。运行时数据目录随之变为 `%APPDATA%/com.ahpx.ed/`（旧 com.ahpx.cdictionary 数据不会自动迁移，首次使用重新“解压词库”即可）
 - **git**：仓库根 = 本仓库；`main` 为稳定线，2026-11-16 的 UI 重构在分支 `feat/vertical-rail-nav`（b88b5c2 / a8a41a0 / 47895f9），合并前以该分支为准
-- **产物**（本地路径，未入库）：
-  - NSIS：`tauri/src-tauri/target/release/bundle/nsis/ED_0.1.0_x64-setup.exe`（约 54.2 MiB）
-  - Portable：`tauri/release/ED-0.1.0-Portable.zip`（约 60 MB，由 make-portable.ps1 生成，exe 名 ED.exe）
-  - 2026-11-17 18:20 重建：内置词库换成合并版（25,179 个 JSON / 41 MB zip，含 AI 补写的释义、例句、近义辨析，并合并 ECDICT 数据）；`ED_SELFTEST=install` 冒烟通过（解压 25,179 文件、索引 10.6 MB / 24,874 去重词条、搜索可用）
+- **产物**（本地路径，未入库；`tauri/release/` 下保留四份）：
+  - 标准版 NSIS：`ED-Standard_0.1.0_x64-setup.exe`（约 54.2 MiB，内置 25,179 条合并词库）
+  - 标准版 Portable：`ED-Standard-0.1.0-Portable.zip`（约 57.2 MiB）
+  - 完整版 NSIS：`ED-Full_0.1.0_x64-setup.exe`（约 63.4 MiB，内置 770,109 条 ECDICT）
+  - 完整版 Portable：`ED-Full-0.1.0-Portable.zip`（约 65.6 MiB）
+  - 2026-11-17 19:48 重建（含词条文件名唯一化修复）：标准版解压 25,179 文件；完整版由 `ecdict.jsonl.gz` 流式导入 770,109 条、索引约 113 MB
 - **运行时数据**：`%APPDATA%/com.ahpx.ed/`（settings.json、index.bin、stats.json、wordbooks.json、tts-cache/、dictionary/）；旧目录 com.ahpx.cdictionary 为历史遗留可自行删除
 
 ## 2. Git 约定
