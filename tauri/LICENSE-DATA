@@ -1,8 +1,16 @@
 # 词典数据许可 / Dictionary Data License
 
-本仓库随应用分发的内置词典数据（`src-tauri/resources/dictionary.zip` 及其解压后的内容）
-是以下作品的改编版本，合并数据整体依据 Creative Commons Attribution-ShareAlike 4.0
-International（CC BY-SA 4.0）发布：
+本仓库随应用分发两个内置词典数据包：
+
+1. **标准版** `src-tauri/resources/dictionary.zip`（及其解压内容）：open-dictionary 数据与
+   ECDICT 数据的合并改编版本；
+2. **完整版** `src-tauri/resources/ecdict.jsonl.gz`（及其解压内容）：以 ECDICT 全量词条为
+   基础，但其中约 2.5 万条已经合入 open-dictionary 的释义/例句内容，并不存在“纯 ECDICT”的
+   完整版。
+
+两个数据包都包含 open-dictionary 的内容，因此**都依据 Creative Commons
+Attribution-ShareAlike 4.0 International（CC BY-SA 4.0）发布**，并保留 ECDICT 的 MIT
+版权声明（见下文第 2 节）：
 
 https://creativecommons.org/licenses/by-sa/4.0/
 
@@ -63,20 +71,25 @@ SOFTWARE.
 
 ## 修改说明 / Changes
 
-本项目内置的 `dictionary.zip` 是 open-dictionary 数据工件的一份 JSON 导出快照
-与 ECDICT 数据的合并版本。具体修改包括：
+**标准版 `dictionary.zip`** 是 open-dictionary 数据工件的一份 JSON 导出快照与 ECDICT
+数据的合并版本。具体修改包括：
 
 - 将 open-dictionary 的分发工件与 ECDICT 数据合并；
 - 将合并结果转换为按词条拆分的 JSON 文件集合；
 - 对字段进行归一化与格式转换，以适配本应用的本地词库加载、搜索与索引流程；
 - 未对 Wiktionary 衍生的释义文本进行实质性改写。
 
-本项目代码（MIT）与本数据文件（CC BY-SA 4.0）是两种不同的作品。
-MIT 许可证不适用于本数据文件。
+**完整版 `ecdict.jsonl.gz`** 以 ECDICT 数据集为基础（其中约 2.5 万条已混入
+open-dictionary 的释义与例句），仅做了格式转换：把按词拆分的 JSON 文件合并为
+「一条 JSON 一行」并用 gzip 压缩，安装时再还原为按词拆分的 JSON；未改动词条文本。
+由于包含 open-dictionary 的 CC BY-SA 4.0 内容，该数据包同样按 CC BY-SA 4.0 发布。
+
+本项目代码（MIT）与上述两个数据包是不同的作品：**两个数据包都受 CC BY-SA 4.0 约束并带
+ShareAlike 义务**，MIT 许可证不适用于数据文件本身。
 
 ## 再分发要求
 
-再分发或二次加工本数据时，必须：
+**两个数据包（均含 open-dictionary 内容，CC BY-SA 4.0）**再分发或二次加工时，必须：
 
 1. 保留对 Wiktionary 贡献者、open-dictionary 项目与 ECDICT 项目的署名；
 2. 以 CC BY-SA 4.0 或兼容许可证发布改编后的数据；

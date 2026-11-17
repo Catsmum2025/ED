@@ -13,7 +13,7 @@
 
 ## 2. Git 约定
 - 提交身份：`git -c user.name=CDictionary -c user.email=dev@local commit ...`（本机无全局身份时用 -c 内联）
-- `.gitignore` 要点：排除 `node_modules/ dist/ dist-electron/ release/ target/ tauri/src-tauri/gen/`、根级 `dictionary/` 语料（5 万文件）、`*.zip`（**例外**：`!tauri/src-tauri/resources/dictionary.zip` 必须入库，它是随包词库）、`*.*log`
+- `.gitignore` 要点：排除 `node_modules/ dist/ dist-electron/ release/ target/ tauri/src-tauri/gen/`、根级 `dictionary/` 语料（5 万文件）、`*.zip`（**例外**：`!tauri/src-tauri/resources/dictionary.zip` 必须入库，它是标准版随包词库）、`*.*log`。完整版数据包 `tauri/src-tauri/resources/ecdict.jsonl.gz`（约 50 MB）也入库（在 GitHub 单文件 <100 MB 限制内）
 - **远端**：`origin = https://github.com/Catsmum2025/ED.git`。⚠️ 2026-11-17 起 **electron/ 已从全部 git 历史中剔除**（filter-branch）且加入 .gitignore——远端仓库只含 Tauri 版；本地磁盘上的 `electron/` 目录保留作参考但不再入库。重写前的完整历史保存在本地 tag `archive/pre-ed-history`（勿推送）
 - 提交历史（下列 SHA 为 2026-11-17 历史重写**前**的存档值，见 tag `archive/pre-ed-history`；重写后 SHA 全部变化但顺序与信息不变）：
   1. `6c96643` 初始导入（electron 原版 + tauri 移植源码；历史重写后 electron 路径已不存在）
@@ -38,10 +38,17 @@
 ```powershell
 # 1) 先杀掉所有实例，否则链接/打包报 os error 5（拒绝访问）
 Get-Process ed, cdictionary -ErrorAction SilentlyContinue | ForEach-Object { taskkill /pid $_.Id /T /F }
-# 2) 固定用 tauri CLI（会先跑 pnpm build 再 cargo release + NSIS），约 6-8 分钟
-Set-Location <仓库根>/tauri; pnpm exec tauri build
+# 1b) 清空打包暂存目录：tauri 不会自动清理，上一版的词库会被 portable 脚本一起打进去
+Remove-Item -Recurse -Force src-tauri/target/release/resources -ErrorAction SilentlyContinue
+# 2) 标准版：tauri CLI（会先跑 pnpm build 再 cargo release + NSIS），约 6-8 分钟
+Set-Location <仓库根>/tauri; pnpm exec tauri build --config src-tauri/tauri.conf.standard.json
+# 2b) 完整版（内置 77 万 ECDICT，只打 ecdict.jsonl.gz）：
+#     pnpm exec tauri build --config src-tauri/tauri.conf.full.json
+#     数据包由本地 ECDICT 目录生成（约 30 秒）：
+#     node scripts/make-ecdict-pack.mjs "<dict_json 目录>" src-tauri/resources/ecdict.jsonl.gz
 # 3) portable zip（Tauri 2.x 无内置 portable bundle 目标，脚本手动组装）
-powershell -ExecutionPolicy Bypass -File .\make-portable.ps1
+powershell -ExecutionPolicy Bypass -File .\make-portable.ps1                                            # 标准版
+powershell -ExecutionPolicy Bypass -File .\make-portable.ps1 -Resource ecdict.jsonl.gz,popup-icon.png   # 完整版
 ```
 - **构建脚本偶发“拒绝访问 (os error 5)”**：tauri-build 构建脚本/链接阶段偶发失败（疑似杀软扫描 target 里的新 exe）。**解法：`cargo clean` 后重试即可**（2026-11-17 实测一次 clean 彻底解决）；先杀进程再构建可预防大部分
 - pnpm 安装时 esbuild 的 build script 警告可忽略（vite 构建正常）
@@ -69,14 +76,15 @@ powershell -ExecutionPolicy Bypass -File .\make-portable.ps1
 - **tray**：`TrayIconBuilder.menu(&menu)` 只传 menu（不传 app、无 Result）；图标用 `Image::new_owned(rgba,w,h)`（image crate 解码 png），2.12 无 `Image::from_path`
 - **chrono**：`NaiveDate` 没有 `overflowing_sub_days`，用 `checked_sub_days(Days::new(n))`
 - **杀软/索引器偶发锁定 settings.json**：save_settings 已内置 5 次×150ms 重试；写失败会 eprintln（stderr），排错时别把 stderr 重定向到 NUL
+- **词库文件名撞 Windows 设备名**：ECDICT 有 con/aux/nul/prn/com1… 这类真实词条，写 `con.json` 在 Windows 上会直接失败（设备名即使带扩展名也保留）。json_file_name 对 22 个保留名加尾下划线（con_.json），JSONL 导入不再中途退出
 
 ## 6. 架构速览（Tauri 版）
 - **前端唯一后端入口**：`src/ipc.ts`（api 形状 = Electron preload，页面零改动）。新增能力按“Rust command → generate_handler! 注册 → ipc.ts 包装 → 组件调用”四步
 - **43 条命令分组**：settings_*（2）、dict_*（8 查询/索引 + 3 安装器）、stats_*（6）、llm_* / dict_generate_word（4）、tts_*（3）、llm_*_local_model（3）、wordbooks_*（10）、window_*（4）
 - **事件通道**：`dict:installProgress/Done/Error`、`translate:chunk/done/error`、`popup:show`、`main:navigate`
 - **窗口 label 约定**：`main` / `popup-dict` / `popup-translate`；弹窗失焦自动隐藏（main.rs 全局 on_window_event 按 label 前缀匹配）、主窗口 CloseRequested→hide（托盘退出经 QUITTING 原子标志放行）
-- **数据目录**：见 state.rs；resource_dir 里找 dictionary.zip/popup-icon.png（兼容 `<rd>/`、`<rd>/resources/` 两种布局）
-- **词库安装流**：installer.rs `extract_and_flatten`（zip crate，无 PowerShell 依赖，可单测）→ 写 settings.dictionaryPath → dict.update_path → rebuild（带进度回调）→ emit Done；前端 ExtractionWatcher 负责把新路径镜像进 store（勿删！曾有陈旧回写竞态导致功能回归，见 b590627）
+- **数据目录**：见 state.rs；resource_dir 里找 dictionary.zip / ecdict.jsonl.gz / popup-icon.png（兼容 `<rd>/`、`<rd>/resources/` 两种布局），标准版与完整版靠随包文件区分
+- **词库安装流**：installer.rs 按扩展名分流——`.zip` 走 `extract_and_build`（zip crate，无 PowerShell 依赖，可单测）；`.jsonl.gz` 走 `import_jsonl_gz`（flate2 流式逐行解析，770,109 条落成按词拆分 JSON 并同趟建索引，包体约 50 MB）→ 写 settings.dictionaryPath → dict.update_path → 建索引 → emit Done；前端 ExtractionWatcher 负责把新路径镜像进 store（勿删！曾有陈旧回写竞态导致功能回归，见 b590627）
 - **前端外壳**：`components/Nav.tsx` 左侧 fixed 竖向图标导航（全高圆角卡片、底部隔线放设置与 `/dashboard`）；`components/Layout.tsx` 用 `.app-main` 预留导航偏移，入场动画只按**一级路由**重放（/settings/* 切换只让右侧面板动，Settings.tsx 按 tab key 播动画）
 - **设置写盘竞态**：store/settings.ts 的 update 先乐观合并、再按自增序号只接受最新一次 settings_set 的返回；否则快速输入时后端回包乱序会把输入值回退、光标跳到末尾（LLM 的 URL / API Key 输入框曾因此“顽疾”）
 - **设计系统**：圆角统一为 4/8/12/16/full（tailwind.config.js 的 borderRadius + index.css 的 --radius 变量）；下拉统一用 `components/Select.tsx`（自定义 listbox，默认下滑展开、空间不足向上翻转、键盘/ARIA 完整），**禁止原生 select**
@@ -100,6 +108,8 @@ powershell -ExecutionPolicy Bypass -File .\make-portable.ps1
    - 证据链：用户数据目录里 25321 个 json + settings.json 的 dictionaryPath 停留旧值；带日志构建抓到完整写入序列（phase3 save dest → 前端 settings_set(dest) → 落盘正确）
 7. **更名 ED + 开源合规 + git 重排**（2026-11-17）：全项目 CDictionary→ED（包名/identifier/标题/产物/环境变量，详见第 1 节）；新增 LICENSE(MIT)、README“词库来源与许可”（上游 ahpxex/open-dictionary，CC BY-SA 4.0 / wordfreq 署名）与致谢（ahpxex/actionary 想法原型）、关于页内嵌声明；把写死的开发机默认词库路径改为空串。git：electron/ 从全部历史剔除 + .gitignore 排除，重写前完整历史存于 tag `archive/pre-ed-history`，force push origin main。构建偶发 os error 5 用 `cargo clean` 解决
 8. **合并 ECDICT 后的数据许可修正**（2026-11-17）：内置 `dictionary.zip` 为 open-dictionary（CC BY-SA 4.0）与 ECDICT（MIT）的合并数据，合并数据整体以 CC BY-SA 4.0 发布；新增 `tauri/LICENSE-DATA`（CC BY-SA 4.0 声明、Wiktionary/open-dictionary/wordfreq 署名、ECDICT MIT 全文与署名、修改说明）；`tauri/README.md` 与根 `README.md` 的许可章节改为代码 MIT / 数据 CC BY-SA 4.0 分列，并链接 `LICENSE-DATA`；根 README 删除“不随包分发 ECDICT 数据”的旧表述
+
+9. **双版本词库（标准版 / 完整版 ECDICT）**（2026-11-17）：完整版以 solid `ecdict.jsonl.gz`（约 50 MB / 770,109 条）随包分发，安装器新增流式 JSONL.GZ 导入（flate2，逐行解析 + 同趟建索引）；`src-tauri/tauri.conf.full.json` 为完整版构建覆盖配置（只打 jsonl.gz）；`scripts/make-ecdict-pack.mjs` 从本地 ECDICT 目录生成数据包（约 30 秒）；两个数据包都含 open-dictionary 内容，均按 CC BY-SA 4.0 发布并保留 ECDICT 的 MIT 声明（LICENSE-DATA 说明）；翻译页复制按钮加入“已复制”勾选反馈
 
 ## 8. 已知差异 / 待办候选
 - apiKey 明文存 settings.json（Electron 用 safeStorage/DPAPI，Tauri 无等价 API；可考虑迁移到 keyring 插件）

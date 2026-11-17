@@ -34,7 +34,7 @@
   "bundle": {
     "active": true,
     "targets": ["nsis"],
-    "resources": ["resources/dictionary.zip", "resources/popup-icon.png"],
+    "resources": ["resources/popup-icon.png"],
     "icon": ["icons/icon.ico", "icons/icon.png"],
     "category": "Productivity",
     "windows": {

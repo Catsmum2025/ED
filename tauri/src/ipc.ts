@@ -61,7 +61,7 @@ const settingsApi = {
   pickZipFile: (): Promise<string | null> =>
     dialogOpen({
       multiple: false,
-      filters: [{ name: '词典压缩包', extensions: ['zip'] }],
+      filters: [{ name: '词典压缩包', extensions: ['zip', 'gz'] }],
       title: '选择词库压缩包',
     }).then((v) => (typeof v === 'string' ? v : null)),
   openUrl: async (url: string): Promise<void> => {

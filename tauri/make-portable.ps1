@@ -1,6 +1,11 @@
 # Assemble the portable build from cargo's release output.
-# Usage: powershell -File make-portable.ps1 [-Version 0.1.0]
-param([string]$Version = "0.1.0")
+# Usage:
+#   powershell -File make-portable.ps1                                   # standard (dictionary.zip)
+#   powershell -File make-portable.ps1 -Resource ecdict.jsonl.gz,popup-icon.png   # full
+param(
+  [string]$Version = "0.1.0",
+  [string[]]$Resource = @("dictionary.zip", "popup-icon.png")
+)
 $ErrorActionPreference = "Stop"
 $rel  = Join-Path $PSScriptRoot "src-tauri\target\release"
 $out  = Join-Path $PSScriptRoot "release"
@@ -13,14 +18,15 @@ New-Item -ItemType Directory -Force $stage | Out-Null
 # cargo builds lowercase; present the portable binary as ED.exe
 $exeSrc = Get-ChildItem $rel -Filter "ed.exe" | Select-Object -First 1
 Copy-Item $exeSrc.FullName (Join-Path $stage "ED.exe")
-# bundled resources (dictionary.zip, popup-icon.png) live next to the binary after tauri build
-if (-not (Test-Path (Join-Path $stage "resources"))) {
-  if (Test-Path (Join-Path $rel "resources")) {
-    Copy-Item -Recurse (Join-Path $rel "resources") (Join-Path $stage "resources")
-  } else {
-    New-Item -ItemType Directory -Force (Join-Path $stage "resources") | Out-Null
-    Copy-Item (Join-Path $PSScriptRoot "src-tauri\resources\*") (Join-Path $stage "resources")
-  }
+
+# Copy exactly the resources that belong to this build (not whatever happens to
+# be left in target/release/resources from an earlier configuration).
+$resDir = Join-Path $stage "resources"
+New-Item -ItemType Directory -Force $resDir | Out-Null
+foreach ($name in $Resource) {
+  $src = Join-Path $PSScriptRoot "src-tauri\resources\$name"
+  if (-not (Test-Path $src)) { throw "resource missing: $src" }
+  Copy-Item $src $resDir
 }
 
 $zip = Join-Path $out "ED-$Version-Portable.zip"

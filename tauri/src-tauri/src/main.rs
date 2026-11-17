@@ -112,14 +112,14 @@ fn main() {
                 let h = handle.clone();
                 std::thread::spawn(move || {
                     std::thread::sleep(std::time::Duration::from_millis(1500));
-                    let zip = installer::find_bundled_zip().unwrap_or_else(|| "<none>".into());
-                    println!("[selftest] bundled zip: {zip}");
+                    let zip = installer::find_bundled_dictionary().unwrap_or_else(|| "<none>".into());
+                    println!("[selftest] bundled dictionary: {zip}");
                     let dest = state::default_dictionary_dir();
                     println!("[selftest] dest dir: {}", dest.display());
                     if let Some(win) = h.get_webview_window("main") {
                         match installer::run_install(&win, &zip, &dest) {
                             Ok(()) => println!("[selftest] run_install OK"),
-                            Err(err) => println!("[selftest] run_install FAILED: {err}"),
+                            Err(err) => eprintln!("[selftest] run_install FAILED: {err}"),
                         }
                     } else {
                         println!("[selftest] main window not found");

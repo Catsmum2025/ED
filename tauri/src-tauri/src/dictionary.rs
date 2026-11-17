@@ -345,6 +345,12 @@ fn list_json_files(dir: &str) -> Vec<String> {
 /// scanner and the zip importer (which has the bytes already in memory).
 pub(crate) fn build_entry_from_json(file_name: &str, raw: &str) -> Option<BuildEntry> {
     let data: WordDefinition = serde_json::from_str(raw).ok()?;
+    Some(build_entry_from_data(data, file_name))
+}
+
+/// Same as build_entry_from_json but for callers that already parsed the JSON
+/// (the JSONL pack importer parses each line once and reuses it).
+pub(crate) fn build_entry_from_data(data: WordDefinition, file_name: &str) -> BuildEntry {
     let data = normalize_entry(data);
     let mut search_text = String::with_capacity(data.concise_definition.len() + data.translation.len() + 128);
     search_text.push_str(&data.concise_definition);
@@ -365,7 +371,32 @@ pub(crate) fn build_entry_from_json(file_name: &str, raw: &str) -> Option<BuildE
     let normal = data.isnormal != Some(0);
     let mut tag_mask = tag_mask_from(&data.tags);
     if normal { tag_mask |= NORMAL_BIT; }
-    Some(BuildEntry { word: data.word, file_name: file_name.to_string(), search_text, tag_mask, normal })
+    BuildEntry { word: data.word, file_name: file_name.to_string(), search_text, tag_mask, normal }
+}
+
+/// Windows reserves CON/PRN/AUX/NUL/COM1..9/LPT1..9 as device names, even with
+/// an extension; writing con.json fails with an invalid-name error. ECDICT has
+/// real words such as "con" and "aux", so escape them with a trailing underscore.
+const RESERVED_NAMES: [&str; 22] = [
+    "con", "prn", "aux", "nul", "com1", "com2", "com3", "com4", "com5", "com6", "com7", "com8",
+    "com9", "lpt1", "lpt2", "lpt3", "lpt4", "lpt5", "lpt6", "lpt7", "lpt8", "lpt9",
+];
+
+/// File name for a word when the source has no per-word file (JSONL pack).
+/// Mirrors the historic Electron naming so imported packs look like the zips.
+pub(crate) fn json_file_name(word: &str) -> String {
+    let mut out = String::new();
+    for c in word.chars() {
+        if c.is_ascii_alphanumeric() { out.extend(c.to_lowercase()); }
+        else { out.push('_'); }
+    }
+    let mut trimmed = out.trim_matches('_').to_string();
+    if trimmed.is_empty() {
+        trimmed = "word".to_string();
+    } else if RESERVED_NAMES.contains(&trimmed.as_str()) {
+        trimmed.push('_');
+    }
+    format!("{}.json", trimmed)
 }
 
 fn build_one(path: &Path, file_name: &str) -> Option<BuildEntry> {
@@ -565,19 +596,9 @@ impl DictionaryService {
         None
     }
 
-    fn file_name_for(word: &str) -> String {
-        let mut out = String::new();
-        for c in word.chars() {
-            if c.is_ascii_alphanumeric() { out.extend(c.to_lowercase()); }
-            else { out.push('_'); }
-        }
-        let trimmed = out.trim_matches('_').to_string();
-        format!("{}.json", if trimmed.is_empty() { "word".to_string() } else { trimmed })
-    }
-
     pub fn add_word(&mut self, entry: &WordDefinition) -> WordDefinition {
         let normalized = normalize_entry(entry.clone());
-        let file_name = Self::file_name_for(&normalized.word);
+        let file_name = json_file_name(&normalized.word);
         if !self.dictionary_path.is_empty() {
             let _ = fs::create_dir_all(&self.dictionary_path);
             let path = Path::new(&self.dictionary_path).join(&file_name);
@@ -1329,6 +1350,18 @@ mod tests {
         assert_eq!(n.definitions.len(), 1);
         assert!(n.definitions[0].explanation_en.contains("lava"));
         assert!(n.definitions[0].explanation_cn.is_empty());
+    }
+
+    #[test]
+    fn json_file_names_escape_windows_devices() {
+        assert_eq!(json_file_name("apple"), "apple.json");
+        assert_eq!(json_file_name("'hood"), "hood.json");
+        assert_eq!(json_file_name("A/B"), "a_b.json");
+        assert_eq!(json_file_name(""), "word.json");
+        // Device names are invalid on Windows even with an extension.
+        assert_eq!(json_file_name("con"), "con_.json");
+        assert_eq!(json_file_name("NUL"), "nul_.json");
+        assert_eq!(json_file_name("com1"), "com1_.json");
     }
 
     /// "Random word" only draws from full entries (isnormal = 1), so it never
