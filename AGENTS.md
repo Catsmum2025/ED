@@ -10,7 +10,7 @@
   - 标准版 Portable：`ED-Standard-0.1.0-Portable.zip`（约 57.2 MiB）
   - 完整版 NSIS：`ED-Full_0.1.0_x64-setup.exe`（约 63.4 MiB，内置 770,109 条 ECDICT）
   - 完整版 Portable：`ED-Full-0.1.0-Portable.zip`（约 65.6 MiB）
-  - 2026-11-17 19:48 重建（含词条文件名唯一化修复）：标准版解压 25,179 文件；完整版由 `ecdict.jsonl.gz` 流式导入 770,109 条、索引约 113 MB
+  - 2026-11-17 19:48 重建（含词条文件名唯一化修复）：标准版解压 25,179 文件；完整版由 `ecdict.jsonl.gz` 流式导入 770,109 条记录 → 769,804 条入库（305 条字段异常跳过）、导入约 345 s、索引约 113 MB
 - **运行时数据**：`%APPDATA%/com.ahpx.ed/`（settings.json、index.bin、stats.json、wordbooks.json、tts-cache/、dictionary/）；旧目录 com.ahpx.cdictionary 为历史遗留可自行删除
 
 ## 2. Git 约定
@@ -58,6 +58,7 @@ powershell -ExecutionPolicy Bypass -File .\make-portable.ps1 -Resource ecdict.js
 ### 验证（改完必跑）
 1. `cd src-tauri && cargo test --bins` —— 含对真实 dictionary.zip 的解压/flatten 单元测试与中文检索打分单测（约 25s）
    - 可选（中文反查回归）：`$env:ED_TEST_DICT = "$env:APPDATA\com.ahpx.ed\dictionary"` 后运行 `cargo test --bins chinese_search_against_real_dictionary_when_available -- --nocapture`；全量 2.5 万词条扫库受杀软 IO 影响可能很慢，可先拷约 400 个样本目录验证
+   - 可选（完整版数据包）：`$env:EDICT_TEST_PACK='<仓库根>/tauri/src-tauri/resources/ecdict.jsonl.gz'; cargo test --bins imports_full_ecdict_pack_when_available -- --ignored --nocapture`；实测 770,109 条记录 → 769,804 条入库（305 条字段类型异常，与 zip 导入行为一致），导入约 345 s
 2. **无头端到端自检**：`ED_SELFTEST=install` 启动 release exe → 完整执行词库安装管线并打印后自动退出：
    ```powershell
    $env:ED_SELFTEST = "install"
