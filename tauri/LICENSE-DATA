@@ -1,0 +1,87 @@
+# 词典数据许可 / Dictionary Data License
+
+本仓库随应用分发的内置词典数据（`src-tauri/resources/dictionary.zip` 及其解压后的内容）
+是以下作品的改编版本，合并数据整体依据 Creative Commons Attribution-ShareAlike 4.0
+International（CC BY-SA 4.0）发布：
+
+https://creativecommons.org/licenses/by-sa/4.0/
+
+## 署名 / Attribution
+
+### 1. Wiktionary 与 open-dictionary
+
+- 源内容：English Wiktionary，https://en.wiktionary.org/
+  由 Wiktionary 贡献者创作，相关内容按 CC BY-SA 4.0 提供。
+- 提取工具：Wiktextract，https://github.com/tatuylonen/wiktextract
+  工具代码以 MIT 许可发布；本数据许可不适用于该工具代码。
+- 数据工件的产出与发布者：ahpxex/open-dictionary，
+  https://github.com/ahpxex/open-dictionary
+  该仓库产出并发布 distribution.jsonl、distribution.sqlite、audit.jsonl
+  等数据工件，以 CC BY-SA 4.0 发布。
+- 内置英文词频数据：wordfreq 3.1.1，作者 Robyn Speer，CC BY-SA 4.0。
+  完整署名与来源保存在上游 open-dictionary 的独立数据库中。
+
+### 2. ECDICT
+
+本数据文件还合并了 ECDICT 词典数据：
+
+- 项目：ECDICT，https://github.com/skywind3000/ECDICT
+- 许可证：MIT
+- 版权声明：Copyright (c) 2025 Linwei
+- 数据构成说明：ECDICT 是一个长期维护的英汉词典数据库，其数据来源包括
+  早期公开词表、开源词典数据（如 cdict）、BNC 与当代语料库词频统计，
+  以及 NodeBox / WordNet 等工具生成的词形变化信息；具体构成见上游
+  README。ECDICT 项目对其数据库整体以 MIT 许可发布。
+
+ECDICT 数据以 MIT 许可提供。MIT 允许再许可（sublicense）。本项目将 ECDICT
+数据与上述 CC BY-SA 4.0 数据合并后，合并数据整体以 CC BY-SA 4.0 发布；
+ECDICT 部分的 MIT 版权声明与许可文本按 MIT 要求原样保留如下：
+
+---
+MIT License
+
+Copyright (c) 2025 Linwei
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+---
+
+## 修改说明 / Changes
+
+本项目内置的 `dictionary.zip` 是 open-dictionary 数据工件的一份 JSON 导出快照
+与 ECDICT 数据的合并版本。具体修改包括：
+
+- 将 open-dictionary 的分发工件与 ECDICT 数据合并；
+- 将合并结果转换为按词条拆分的 JSON 文件集合；
+- 对字段进行归一化与格式转换，以适配本应用的本地词库加载、搜索与索引流程；
+- 未对 Wiktionary 衍生的释义文本进行实质性改写。
+
+本项目代码（MIT）与本数据文件（CC BY-SA 4.0）是两种不同的作品。
+MIT 许可证不适用于本数据文件。
+
+## 再分发要求
+
+再分发或二次加工本数据时，必须：
+
+1. 保留对 Wiktionary 贡献者、open-dictionary 项目与 ECDICT 项目的署名；
+2. 以 CC BY-SA 4.0 或兼容许可证发布改编后的数据；
+3. 说明所做的修改；
+4. 保留 ECDICT 部分的 MIT 版权声明与许可文本。
+
+本数据文件不暗示 Wiktionary、Wiktextract、open-dictionary、ECDICT 或 wordfreq
+作者对本项目的背书。

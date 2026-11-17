@@ -14,28 +14,32 @@
 
 ## 词库来源与许可
 
-词条数据来自上游项目 [ahpxex/open-dictionary](https://github.com/ahpxex/open-dictionary) —— 一部以 Wiktionary/Wiktextract 快照为基础、再用大模型补写学习者向解释的开源英汉词典，当前收录 84,212 个词条。
+内置词典数据来自以下两个上游来源的合并版本：
 
-ED 只是它的一个消费者：随安装包分发的是上游词库的一份 JSON 导出快照（`src-tauri/resources/dictionary.zip`，约 2.5 万文件 / 41 MB，含 AI 补写的释义、例句与近义辨析），在“设置 → 词典 → 解压词库”时安装到本地使用。词库的构建管线、选词规则和释义质量由上游负责，相关问题请到[上游仓库](https://github.com/ahpxex/open-dictionary)反馈。
+- [ahpxex/open-dictionary](https://github.com/ahpxex/open-dictionary) —— 一部以 Wiktionary/Wiktextract 快照为基础、再用大模型补写学习者向解释的开源英汉词典，数据工件以 CC BY-SA 4.0 发布。
+- [skywind3000/ECDICT](https://github.com/skywind3000/ECDICT) —— 以 MIT 许可发布的词典数据。
+
+ED 随安装包分发的是上述两个来源的合并快照（`src-tauri/resources/dictionary.zip`，约 41 MB，含 AI 补写的释义、例句与近义辨析，并合并 ECDICT 数据），在“设置 → 词典 → 解压词库”时安装到本地使用。词库的构建管线、选词规则和释义质量由上游负责，相关问题请到[上游仓库](https://github.com/ahpxex/open-dictionary)反馈。
 
 ### 许可
 | 内容 | 许可 |
 |---|---|
-| 上游词典数据 | CC BY-SA 4.0，Wiktionary 内容的衍生作品 |
+| 内置词典数据（`dictionary.zip` 及其解压内容，合并自 open-dictionary 与 ECDICT） | 整体以 **CC BY-SA 4.0** 发布；其中 ECDICT 部分保留 MIT 署名。完整署名、修改说明与许可证全文见 [LICENSE-DATA](LICENSE-DATA) |
 | 内置英文词频数据 | CC BY-SA 4.0，来自 wordfreq 3.1.1，作者 Robyn Speer；完整署名与来源保存在上游独立数据库中，见上游的数据说明 |
-| 上游词典与本项目代码 | MIT（代码见 [LICENSE](LICENSE)） |
+| 本项目代码 | MIT（见 [LICENSE](LICENSE)） |
 
-数据依 ShareAlike 条款分发：再分发或二次加工时须以相同许可发布，并保留对应数据源的署名与许可信息。
+数据依 ShareAlike 条款分发：再分发或二次加工时须以相同许可发布，并保留对应数据源的署名与许可信息。**代码（MIT）与数据（CC BY-SA 4.0）是两种不同的作品，MIT 许可证不适用于数据文件。** 内置词典数据由 open-dictionary（CC BY-SA 4.0）与 ECDICT（MIT）合并而成；合并数据整体依 ShareAlike 以 CC BY-SA 4.0 发布，ECDICT 的 MIT 版权声明与许可文本保留在 `LICENSE-DATA` 中。
 
 ## 致谢
-- 感谢词库上游项目 [ahpxex/open-dictionary](https://github.com/ahpxex/open-dictionary) 提供全部词条数据；
+- 感谢词库上游项目 [ahpxex/open-dictionary](https://github.com/ahpxex/open-dictionary) 提供词条数据；
+- 感谢 [skywind3000/ECDICT](https://github.com/skywind3000/ECDICT) 提供以 MIT 许可发布的词典数据；
 - 感谢 [ahpxex/actionary](https://github.com/ahpxex/actionary) 项目提供的想法与原型——ED 的产品形态深受其启发；
 - 感谢 Wiktionary / Wiktextract 社区与 wordfreq 作者 Robyn Speer。
 
-本项目开源，代码以 MIT 许可发布（见 [LICENSE](LICENSE)）。
+本项目开源，代码以 MIT 许可发布（见 [LICENSE](LICENSE)）。数据许可与完整署名见 [LICENSE-DATA](LICENSE-DATA)。
 
 ## 大词库支持（ECDICT dict_json，77 万词条）
-- 两种词库数据都支持：旧版每词一个富化 JSON（约 2.5 万条）与 ECDICT dict_json（770,109 个 JSON，约 294 MB；字段 word / phonetic / translation / definition / tags / exchange，约 1.5% 带富化 definitions 与例句）
+- 两种词库数据都支持：内置合并词库（约 2.5 万条）与外部导入的 ECDICT dict_json（770,109 个 JSON，约 294 MB；字段 word / phonetic / translation / definition / tags / exchange，约 1.5% 带富化 definitions 与例句）
 - 读取时自动归一化：phonetic→音标、translation 首行→简洁释义、空 definitions 按换行拆成释义卡（isnormal=0 的词条因此仍有基础中文释义 + 英文定义）、exchange（s: / p: / d: / i: / 3: / r: / t:）→ 词形标签
 - 索引从 index.json 改为紧凑二进制 **index.bin**：770k 条约 115 MB，启动加载约 0.2 s；搜索并行扫描，中文按“词头 POS + 释义边界 + 常用标签（zk/gk/cet4…）”排序，例句不参与中文检索（避免“量子纠缠”被姓名的例句命中）
 - “每日随机”只从 isnormal=1（有完整释义与例句）的词条中抽取，一次文件读取即可返回，不再连续试探
