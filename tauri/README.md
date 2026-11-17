@@ -8,7 +8,7 @@
 - 开发调试：pnpm install && pnpm tauri:dev
 - 安装包（NSIS，标准版）：pnpm exec tauri build --config src-tauri/tauri.conf.standard.json → src-tauri/target/release/bundle/nsis/ED_0.1.0_x64-setup.exe
 - 安装包（NSIS，完整版 77 万词条）：pnpm exec tauri build --config src-tauri/tauri.conf.full.json（该覆盖配置只把 resources/ecdict.jsonl.gz 打进包，不再带标准版的 dictionary.zip）
-- Portable：先执行对应构建，再 powershell -File make-portable.ps1（标准版）或 powershell -File make-portable.ps1 -Resource ecdict.jsonl.gz,popup-icon.png（完整版）→ release/ED-0.1.0-Portable.zip（Tauri 2.x 无内置 portable 打包目标，此脚本按 -Resource 指定清单组装 release 产物 + 资源）
+- Portable：先执行对应构建，再 powershell -File make-portable.ps1（标准版 → release/ED-Standard-0.1.0-Portable.zip）或 powershell -File make-portable.ps1 -Edition Full -Resource ecdict.jsonl.gz,popup-icon.png（完整版 → release/ED-Full-0.1.0-Portable.zip）（Tauri 2.x 无内置 portable 打包目标，此脚本按 -Resource 指定清单组装 release 产物 + 资源）
 - 图标：pnpm icon（源图 app-icon.png，tauri icon 生成 src-tauri/icons/*）
 - 无头自检：设置环境变量 ED_SELFTEST=install 后运行 exe，会自动执行完整“解压词库”管线（找内置词库 → 解压/流式导入 → 写 settings → 重建索引）并打印结果后退出，用于打包产物验证
 - 单元测试：cd src-tauri && cargo test --bins

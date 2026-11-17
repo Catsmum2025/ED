@@ -42,8 +42,8 @@ pnpm install
 pnpm tauri:dev                    # 热更新开发
 pnpm exec tauri build --config src-tauri/tauri.conf.standard.json   # 标准版 NSIS → …/bundle/nsis/ED_0.1.0_x64-setup.exe
 pnpm exec tauri build --config src-tauri/tauri.conf.full.json      # 完整版（内置 77 万 ECDICT）
-powershell -File make-portable.ps1                                  # 标准版 portable
-powershell -File make-portable.ps1 -Resource ecdict.jsonl.gz,popup-icon.png   # 完整版 portable
+powershell -File make-portable.ps1                                            # 标准版 portable
+powershell -File make-portable.ps1 -Edition Full -Resource ecdict.jsonl.gz,popup-icon.png   # 完整版 portable
 cd src-tauri && cargo test --bins    # 单元测试
 ```
 > ⚠️ 重建前先结束所有 `ed.exe`/`cdictionary.exe` 进程；若构建脚本报“拒绝访问 (os error 5)”，在 src-tauri 下 `cargo clean` 后重试。更多见 [AGENTS.md](AGENTS.md)。

@@ -10,7 +10,7 @@
   - 标准版 Portable：`ED-Standard-0.1.0-Portable.zip`（约 57.2 MiB）
   - 完整版 NSIS：`ED-Full_0.1.0_x64-setup.exe`（约 63.4 MiB，内置 770,109 条 ECDICT）
   - 完整版 Portable：`ED-Full-0.1.0-Portable.zip`（约 65.6 MiB）
-  - 2026-11-17 19:48 重建（含词条文件名唯一化修复）：标准版解压 25,179 文件；完整版由 `ecdict.jsonl.gz` 流式导入 770,109 条记录 → 769,804 条入库（305 条字段异常跳过）、导入约 345 s、索引约 113 MB
+  - 2026-11-17 20:22 重建（含词条文件名唯一化修复；portable 按版本分开：ED-Standard-Portable-* / ED-Full-Portable-*）：标准版解压 25,179 文件；完整版由 `ecdict.jsonl.gz` 流式导入 770,109 条记录 → 769,804 条入库（305 条字段异常跳过）、导入约 345 s、索引约 113 MB
 - **运行时数据**：`%APPDATA%/com.ahpx.ed/`（settings.json、index.bin、stats.json、wordbooks.json、tts-cache/、dictionary/）；旧目录 com.ahpx.cdictionary 为历史遗留可自行删除
 
 ## 2. Git 约定
@@ -49,8 +49,8 @@ Set-Location <仓库根>/tauri; pnpm exec tauri build --config src-tauri/tauri.c
 #     数据包由本地 ECDICT 目录生成（约 30 秒）：
 #     node scripts/make-ecdict-pack.mjs "<dict_json 目录>" src-tauri/resources/ecdict.jsonl.gz
 # 3) portable zip（Tauri 2.x 无内置 portable bundle 目标，脚本手动组装）
-powershell -ExecutionPolicy Bypass -File .\make-portable.ps1                                            # 标准版
-powershell -ExecutionPolicy Bypass -File .\make-portable.ps1 -Resource ecdict.jsonl.gz,popup-icon.png   # 完整版
+powershell -ExecutionPolicy Bypass -File .\make-portable.ps1                                              # 标准版 → ED-Standard-0.1.0-Portable.zip
+powershell -ExecutionPolicy Bypass -File .\make-portable.ps1 -Edition Full -Resource ecdict.jsonl.gz,popup-icon.png   # 完整版 → ED-Full-0.1.0-Portable.zip
 ```
 - **构建脚本偶发“拒绝访问 (os error 5)”**：tauri-build 构建脚本/链接阶段偶发失败（疑似杀软扫描 target 里的新 exe）。**解法：`cargo clean` 后重试即可**（2026-11-17 实测一次 clean 彻底解决）；先杀进程再构建可预防大部分
 - pnpm 安装时 esbuild 的 build script 警告可忽略（vite 构建正常）

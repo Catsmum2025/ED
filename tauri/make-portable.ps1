@@ -1,15 +1,16 @@
-# Assemble the portable build from cargo's release output.
+# Assemble one portable build from cargo's release output.
 # Usage:
-#   powershell -File make-portable.ps1                                   # standard (dictionary.zip)
-#   powershell -File make-portable.ps1 -Resource ecdict.jsonl.gz,popup-icon.png   # full
+#   powershell -File make-portable.ps1                                              # Standard edition
+#   powershell -File make-portable.ps1 -Edition Full -Resource ecdict.jsonl.gz,popup-icon.png
 param(
   [string]$Version = "0.1.0",
+  [string]$Edition = "Standard",
   [string[]]$Resource = @("dictionary.zip", "popup-icon.png")
 )
 $ErrorActionPreference = "Stop"
 $rel  = Join-Path $PSScriptRoot "src-tauri\target\release"
 $out  = Join-Path $PSScriptRoot "release"
-$stage = Join-Path $out "ED-Portable-$Version"
+$stage = Join-Path $out "ED-$Edition-Portable-$Version"
 
 New-Item -ItemType Directory -Force $out | Out-Null
 if (Test-Path $stage) { Remove-Item -Recurse -Force $stage }
@@ -29,7 +30,7 @@ foreach ($name in $Resource) {
   Copy-Item $src $resDir
 }
 
-$zip = Join-Path $out "ED-$Version-Portable.zip"
+$zip = Join-Path $out "ED-$Edition-$Version-Portable.zip"
 if (Test-Path $zip) { Remove-Item -Force $zip }
 Compress-Archive -Path (Join-Path $stage "*") -DestinationPath $zip
 Write-Host "portable zip: $zip"
