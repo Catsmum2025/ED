@@ -76,7 +76,7 @@ powershell -ExecutionPolicy Bypass -File .\make-portable.ps1 -Resource ecdict.js
 - **tray**：`TrayIconBuilder.menu(&menu)` 只传 menu（不传 app、无 Result）；图标用 `Image::new_owned(rgba,w,h)`（image crate 解码 png），2.12 无 `Image::from_path`
 - **chrono**：`NaiveDate` 没有 `overflowing_sub_days`，用 `checked_sub_days(Days::new(n))`
 - **杀软/索引器偶发锁定 settings.json**：save_settings 已内置 5 次×150ms 重试；写失败会 eprintln（stderr），排错时别把 stderr 重定向到 NUL
-- **词库文件名撞 Windows 设备名**：ECDICT 有 con/aux/nul/prn/com1… 这类真实词条，写 `con.json` 在 Windows 上会直接失败（设备名即使带扩展名也保留）。json_file_name 对 22 个保留名加尾下划线（con_.json），JSONL 导入不再中途退出
+- **词库文件名要唯一且 Windows 合法**：ECDICT 有 con/aux/nul/prn/com1… 这类真实词条（写 con.json 会失败），还有 `'hood` 与 `-hood` 这类清洗后同名的词条（10,036 组冲突）。json_file_name 对含非字母数字的词条和 22 个设备名追加 FNV-1a 短哈希（如 hood_1a2b3c4d.json），770,109 条实测文件名全唯一、全合法
 
 ## 6. 架构速览（Tauri 版）
 - **前端唯一后端入口**：`src/ipc.ts`（api 形状 = Electron preload，页面零改动）。新增能力按“Rust command → generate_handler! 注册 → ipc.ts 包装 → 组件调用”四步

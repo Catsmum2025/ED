@@ -382,8 +382,22 @@ const RESERVED_NAMES: [&str; 22] = [
     "com9", "lpt1", "lpt2", "lpt3", "lpt4", "lpt5", "lpt6", "lpt7", "lpt8", "lpt9",
 ];
 
+fn short_hash(s: &str) -> u32 {
+    let mut h: u32 = 0x811c_9dc5;
+    for b in s.as_bytes() {
+        h ^= *b as u32;
+        h = h.wrapping_mul(0x0100_0193);
+    }
+    h
+}
+
 /// File name for a word when the source has no per-word file (JSONL pack).
 /// Mirrors the historic Electron naming so imported packs look like the zips.
+///
+/// Words containing punctuation/spaces (and Windows device names) get a stable
+/// hash suffix: ECDICT has entries like "'hood" and "-hood" that would both
+/// sanitise to hood.json and overwrite each other. 10k of the 770k entries
+/// collide without this.
 pub(crate) fn json_file_name(word: &str) -> String {
     let mut out = String::new();
     for c in word.chars() {
@@ -393,8 +407,10 @@ pub(crate) fn json_file_name(word: &str) -> String {
     let mut trimmed = out.trim_matches('_').to_string();
     if trimmed.is_empty() {
         trimmed = "word".to_string();
-    } else if RESERVED_NAMES.contains(&trimmed.as_str()) {
-        trimmed.push('_');
+    }
+    let plain = word.chars().all(|c| c.is_ascii_alphanumeric());
+    if !word.is_empty() && (!plain || RESERVED_NAMES.contains(&trimmed.as_str())) {
+        trimmed.push_str(&format!("_{:08x}", short_hash(word)));
     }
     format!("{}.json", trimmed)
 }
@@ -1353,15 +1369,20 @@ mod tests {
     }
 
     #[test]
-    fn json_file_names_escape_windows_devices() {
+    fn json_file_names_stay_unique_and_windows_safe() {
         assert_eq!(json_file_name("apple"), "apple.json");
-        assert_eq!(json_file_name("'hood"), "hood.json");
-        assert_eq!(json_file_name("A/B"), "a_b.json");
         assert_eq!(json_file_name(""), "word.json");
+        // Sanitised names get a stable hash so different words never collide.
+        let hood = json_file_name("'hood");
+        let dash = json_file_name("-hood");
+        assert!(hood.starts_with("hood_") && hood.ends_with(".json"), "{hood}");
+        assert!(dash.starts_with("hood_") && dash.ends_with(".json"), "{dash}");
+        assert_ne!(hood, dash);
+        assert!(json_file_name("A/B").starts_with("a_b_"));
         // Device names are invalid on Windows even with an extension.
-        assert_eq!(json_file_name("con"), "con_.json");
-        assert_eq!(json_file_name("NUL"), "nul_.json");
-        assert_eq!(json_file_name("com1"), "com1_.json");
+        assert!(json_file_name("con").starts_with("con_"));
+        assert!(json_file_name("NUL").starts_with("nul_"));
+        assert!(json_file_name("com1").starts_with("com1_"));
     }
 
     /// "Random word" only draws from full entries (isnormal = 1), so it never
