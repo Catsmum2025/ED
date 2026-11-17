@@ -133,7 +133,7 @@ const messages: Record<Locale, Record<string, string>> = {
 
     // Settings → LLM
     'settings.llm.connection': '提供商连接',
-    'settings.llm.connectionDesc': '配置您的大语言模型端点的基础 URL 和身份验证。',
+    'settings.llm.connectionDesc': '配置您的大语言模型端点的基础 URL 和身份验证。任意 OpenAI 兼容服务均可（llama.cpp / LM Studio / Unsloth Studio / vLLM 等）。',
     'settings.llm.baseUrl': '基础 URL',
     'settings.llm.apiKey': 'API 密钥',
     'settings.llm.optional': '可选',
@@ -495,7 +495,7 @@ const messages: Record<Locale, Record<string, string>> = {
 
     // Settings → LLM
     'settings.llm.connection': 'Provider Connection',
-    'settings.llm.connectionDesc': 'Configure the base URL and authentication for your LLM endpoint.',
+    'settings.llm.connectionDesc': 'Configure the base URL and authentication for your LLM endpoint (any OpenAI-compatible server: llama.cpp, LM Studio, Unsloth Studio, vLLM, ...).',
     'settings.llm.baseUrl': 'Base URL',
     'settings.llm.apiKey': 'API Key',
     'settings.llm.optional': 'Optional',
