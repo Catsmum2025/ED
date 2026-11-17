@@ -216,6 +216,7 @@ pub(crate) fn extract_and_build(
 }
 
 /// Window-free extraction core so the flow can be unit-tested headlessly.
+#[cfg(test)]
 pub(crate) fn extract_and_flatten(
     zip_path: &str,
     dest_dir: &std::path::Path,
