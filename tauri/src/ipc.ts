@@ -8,7 +8,7 @@
  */
 import { invoke, convertFileSrc } from '@tauri-apps/api/core';
 import { listen, type UnlistenFn } from '@tauri-apps/api/event';
-import { openPath as shellOpenPath } from '@tauri-apps/plugin-opener';
+import { openPath as shellOpenPath, openUrl as shellOpenUrl } from '@tauri-apps/plugin-opener';
 import { open as dialogOpen, save as dialogSave } from '@tauri-apps/plugin-dialog';
 import type {
   AppSettings,
@@ -58,6 +58,9 @@ const settingsApi = {
     dialogOpen({ directory: true, multiple: false, title: '选择词典目录' }).then(
       (v) => (typeof v === 'string' ? v : null),
     ),
+  openUrl: async (url: string): Promise<void> => {
+    await shellOpenUrl(url);
+  },
   openPath: async (path: string): Promise<void> => {
     await shellOpenPath(path);
   },
@@ -99,7 +102,7 @@ const statsApi = {
   topWords: (limit?: number): Promise<TopWord[]> => invoke<TopWord[]>('stats_top_words', { limit }),
   deleteWord: (word: string): Promise<void> => invoke('stats_delete_word', { word }),
   export: async (type: 'learned' | 'queries'): Promise<{ canceled: boolean; path?: string }> => {
-    const defaultPath = type === 'learned' ? 'cdictionary-learned.txt' : 'cdictionary-queries.txt';
+    const defaultPath = type === 'learned' ? 'ed-learned.txt' : 'ed-queries.txt';
     const target = await dialogSave({
       defaultPath,
       filters: [{ name: '文本文件', extensions: ['txt'] }],

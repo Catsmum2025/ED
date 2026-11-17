@@ -25,7 +25,7 @@ pub struct AppState {
 static DATA_DIR: OnceLock<PathBuf> = OnceLock::new();
 static RESOURCE_DIR: OnceLock<PathBuf> = OnceLock::new();
 
-/// %APPDATA%/com.ahpx.cdictionary - the Electron app's userData equivalent.
+/// %APPDATA%/com.ahpx.ed - the Electron app's userData equivalent.
 pub fn data_dir() -> &'static Path {
     DATA_DIR.get().expect("data dir initialised in setup")
 }

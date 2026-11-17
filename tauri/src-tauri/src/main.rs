@@ -1,6 +1,6 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
-//! CDictionary (Tauri port). Entry point wiring services, plugins, tray,
+//! ED (Tauri). Entry point wiring services, plugins, tray,
 //! hotkeys and every command that mirrors the Electron main process.
 
 mod dictionary;
@@ -104,11 +104,11 @@ fn main() {
                 }
             }
 
-            // Developer hook: run with CDICTIONARY_SELFTEST=install to exercise the
+            // Developer hook: run with ED_SELFTEST=install to exercise the
             // whole dictionary-install pipeline (bundled-zip lookup -> extract ->
             // flatten -> settings persistence -> index rebuild) and then exit.
             // Used to verify packaged artifacts headlessly.
-            if std::env::var("CDICTIONARY_SELFTEST").ok().as_deref() == Some("install") {
+            if std::env::var("ED_SELFTEST").ok().as_deref() == Some("install") {
                 let h = handle.clone();
                 std::thread::spawn(move || {
                     std::thread::sleep(std::time::Duration::from_millis(1500));

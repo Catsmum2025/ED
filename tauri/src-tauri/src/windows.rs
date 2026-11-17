@@ -139,7 +139,7 @@ pub fn build_tray(app: &AppHandle) -> tauri::Result<()> {
 
     let mut builder = TrayIconBuilder::with_id("main-tray")
         .menu(&menu)
-        .tooltip("CDictionary")
+        .tooltip("ED")
         .on_menu_event(|app: &AppHandle, event| {
             let id = event.id().as_ref();
             match id {

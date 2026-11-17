@@ -472,29 +472,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "cdictionary"
-version = "0.1.0"
-dependencies = [
- "chrono",
- "futures-util",
- "image",
- "rand",
- "reqwest 0.12.28",
- "serde",
- "serde_json",
- "sha1",
- "tauri",
- "tauri-build",
- "tauri-plugin-autostart",
- "tauri-plugin-dialog",
- "tauri-plugin-global-shortcut",
- "tauri-plugin-opener",
- "tauri-plugin-single-instance",
- "uuid",
- "zip",
-]
-
-[[package]]
 name = "cesu8"
 version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -957,6 +934,29 @@ name = "dyn-clone"
 version = "1.0.20"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d0881ea181b1df73ff77ffaaf9c7544ecc11e82fba9b5f27b262a3c73a332555"
+
+[[package]]
+name = "ed"
+version = "0.1.0"
+dependencies = [
+ "chrono",
+ "futures-util",
+ "image",
+ "rand",
+ "reqwest 0.12.28",
+ "serde",
+ "serde_json",
+ "sha1",
+ "tauri",
+ "tauri-build",
+ "tauri-plugin-autostart",
+ "tauri-plugin-dialog",
+ "tauri-plugin-global-shortcut",
+ "tauri-plugin-opener",
+ "tauri-plugin-single-instance",
+ "uuid",
+ "zip",
+]
 
 [[package]]
 name = "embed-resource"

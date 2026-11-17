@@ -24,7 +24,7 @@ const messages: Record<Locale, Record<string, string>> = {
     'dashboard.subtitle': '多软件互联的统一入口',
     'dashboard.badge': '建设中',
     'dashboard.comingSoon': '敬请期待',
-    'dashboard.desc': '全局面板将把 CDictionary 与其他软件串联起来，在这里统一查看数据、状态与快捷入口。',
+    'dashboard.desc': '全局面板将把 ED 与其他软件串联起来，在这里统一查看数据、状态与快捷入口。',
     'dashboard.point.interconnect': '多软件互联',
     'dashboard.point.overview': '数据总览',
     'dashboard.point.entry': '统一入口',
@@ -58,7 +58,7 @@ const messages: Record<Locale, Record<string, string>> = {
     'settings.general.systemSection': '系统',
     'settings.general.systemDesc': '配置开机启动行为。',
     'settings.general.launchAtLogin': '开机自启动',
-    'settings.general.launchAtLoginDesc': '登录系统时自动启动 CDictionary。',
+    'settings.general.launchAtLoginDesc': '登录系统时自动启动 ED。',
     'settings.general.motion': '动画效果',
     'settings.general.motionDesc': '选择界面动效的强度。性能模式会关闭所有动画，适合低配置设备。',
     'settings.general.motionLively': '活泼',
@@ -167,10 +167,16 @@ const messages: Record<Locale, Record<string, string>> = {
 
     // Settings → About
     'settings.about.title': '关于',
-    'settings.about.desc': 'CDictionary 是一款极简本地英汉词典与翻译应用。',
+    'settings.about.desc': 'ED 是一款极简本地英汉词典与翻译应用。',
     'settings.about.version': '版本',
     'settings.about.offline': '所有数据均保存在本地，无需联网即可查词。',
     'settings.about.translateNote': '翻译功能通过 OpenAI 兼容 API 调用本地或远程大语言模型。',
+  'settings.about.dataTitle': '词库来源与许可',
+  'settings.about.dataSource': '词条数据来自上游项目 ahpxex/open-dictionary——一部以 Wiktionary/Wiktextract 快照为基础、再用大模型补写学习者向解释的开源英汉词典。ED 只是它的一个消费者；词库的构建管线、选词规则和释义质量由上游负责，相关问题请到上游仓库反馈。',
+  'settings.about.dataLicense': '上游词典数据：CC BY-SA 4.0（Wiktionary 内容的衍生作品）。数据依 ShareAlike 条款分发：再分发或二次加工时须以相同许可发布，并保留对应数据源的署名与许可信息。本项目代码：MIT。',
+  'settings.about.upstream': '上游词典仓库',
+  'settings.about.ackTitle': '致谢',
+  'settings.about.ackBody': '感谢 ahpxex/actionary 项目提供的想法与原型；本项目同样开源（MIT）。',
 
     // Popup Frame
     'popup.switchToMain': '切换到主程序',
@@ -376,7 +382,7 @@ const messages: Record<Locale, Record<string, string>> = {
     'dashboard.subtitle': 'The unified hub for your connected apps',
     'dashboard.badge': 'In progress',
     'dashboard.comingSoon': 'Coming soon',
-    'dashboard.desc': 'The global dashboard will connect CDictionary with your other apps — one place for data, status and quick entries.',
+    'dashboard.desc': 'The global dashboard will connect ED with your other apps — one place for data, status and quick entries.',
     'dashboard.point.interconnect': 'App interconnect',
     'dashboard.point.overview': 'Data overview',
     'dashboard.point.entry': 'Single entry point',
@@ -410,7 +416,7 @@ const messages: Record<Locale, Record<string, string>> = {
     'settings.general.systemSection': 'System',
     'settings.general.systemDesc': 'Configure startup behavior.',
     'settings.general.launchAtLogin': 'Launch at Login',
-    'settings.general.launchAtLoginDesc': 'Automatically start CDictionary when you log in.',
+    'settings.general.launchAtLoginDesc': 'Automatically start ED when you log in.',
     'settings.general.motion': 'Motion',
     'settings.general.motionDesc': 'Choose how animated the interface feels. Performance disables every animation, which suits low-end devices.',
     'settings.general.motionLively': 'Lively',
@@ -519,10 +525,16 @@ const messages: Record<Locale, Record<string, string>> = {
 
     // Settings → About
     'settings.about.title': 'About',
-    'settings.about.desc': 'CDictionary is a minimal local English-Chinese dictionary and translation app.',
+    'settings.about.desc': 'ED is a minimal local English-Chinese dictionary and translation app.',
     'settings.about.version': 'Version',
     'settings.about.offline': 'All data is stored locally. No internet connection required for lookups.',
     'settings.about.translateNote': 'Translation uses an OpenAI-compatible API to call local or remote LLMs.',
+  'settings.about.dataTitle': 'Dictionary data source & license',
+  'settings.about.dataSource': 'Word data comes from the upstream project ahpxex/open-dictionary — an open English-Chinese dictionary built on Wiktionary/Wiktextract snapshots, with learner-oriented explanations supplemented by LLMs. ED is merely a consumer of it; the upstream owns the build pipeline, word selection and definition quality, so please report such issues upstream.',
+  'settings.about.dataLicense': 'Upstream dictionary data: CC BY-SA 4.0 (a derivative of Wiktionary content). The data is distributed under ShareAlike: redistributions or derivatives must be published under the same license with attribution preserved. ED source code: MIT.',
+  'settings.about.upstream': 'Upstream dictionary repository',
+  'settings.about.ackTitle': 'Acknowledgements',
+  'settings.about.ackBody': 'Thanks to the ahpxex/actionary project for the idea and prototype; this project is open source as well (MIT).',
 
     // Popup Frame
     'popup.switchToMain': 'Switch to Main',

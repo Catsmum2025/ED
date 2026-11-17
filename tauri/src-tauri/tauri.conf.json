@@ -1,8 +1,8 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "CDictionary",
+  "productName": "ED",
   "version": "0.1.0",
-  "identifier": "com.ahpx.cdictionary",
+  "identifier": "com.ahpx.ed",
   "build": {
     "beforeDevCommand": "pnpm dev",
     "devUrl": "http://localhost:1420",
@@ -13,7 +13,7 @@
     "windows": [
       {
         "label": "main",
-        "title": "CDictionary",
+        "title": "ED",
         "width": 1100,
         "height": 760,
         "minWidth": 720,

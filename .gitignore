@@ -12,6 +12,9 @@ dictionary/
 *.zip
 !tauri/src-tauri/resources/dictionary.zip
 
+# the original Electron app stays local-only (removed from git history 2026-11-17)
+electron/
+
 # misc
 .DS_Store
 *.log

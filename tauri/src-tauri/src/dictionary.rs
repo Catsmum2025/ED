@@ -608,15 +608,15 @@ mod tests {
 
     #[test]
     fn chinese_search_against_real_dictionary_when_available() {
-        // Opt-in: point CDICTIONARY_TEST_DICT at a dictionary folder to run
+        // Opt-in: point ED_TEST_DICT at a dictionary folder to run
         // the full index + search pipeline against real data.
-        let dir = match std::env::var("CDICTIONARY_TEST_DICT") {
+        let dir = match std::env::var("ED_TEST_DICT") {
             Ok(d) if std::path::Path::new(&d).is_dir() => d,
             _ => return,
         };
         let mut svc = DictionaryService {
             dictionary_path: dir,
-            index_path: std::env::temp_dir().join("cdictionary-test-index.json"),
+            index_path: std::env::temp_dir().join("ed-test-index.json"),
             index: None,
         };
         let count = svc.rebuild(None);

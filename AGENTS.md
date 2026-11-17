@@ -2,20 +2,21 @@
 
 > 面向接手本项目的 AI 代理与开发者。记录当前状态、构建/验证的正确姿势、历史决策与踩坑。修改代码后请同步更新本文档与 README（见“文档维护规则”）。
 
-## 1. 当前状态快照（2026-11-16）
-- **主线**：`tauri/`（Tauri v2 重构版），功能已对齐 Electron 版并全部验证可用
+## 1. 当前状态快照（2026-11-17）
+- **项目已更名为 ED**（原 CDictionary）：包名 `ed`、identifier `com.ahpx.ed`、窗口/托盘标题 `ED`、产物 `ED_0.1.0_x64-setup.exe` / `ED-0.1.0-Portable.zip`、自检环境变量 `ED_SELFTEST=install`、中文反查测试字典变量 `ED_TEST_DICT`。运行时数据目录随之变为 `%APPDATA%/com.ahpx.ed/`（旧 com.ahpx.cdictionary 数据不会自动迁移，首次使用重新“解压词库”即可）
 - **git**：仓库根 = `D:/trae/CDictionary`；`main` 为稳定线，2026-11-16 的 UI 重构在分支 `feat/vertical-rail-nav`（b88b5c2 / a8a41a0 / 47895f9），合并前以该分支为准
 - **产物**（本地路径，未入库）：
-  - NSIS：`tauri/src-tauri/target/release/bundle/nsis/CDictionary_0.1.0_x64-setup.exe`（约 48.8 MB）
-  - Portable：`tauri/release/CDictionary-0.1.0-Portable.zip`（约 52 MB，由 make-portable.ps1 生成）
-  - 两者均为 2026-11-16 19:31 / 19:38 的“解压词库修复版”构建
-- **运行时数据**：`%APPDATA%/com.ahpx.cdictionary/`（settings.json、index.json、stats.json、wordbooks.json、tts-cache/、dictionary/）；当前用户机上词库已安装、设置指向 `.../dictionary`，一切正常
+  - NSIS：`tauri/src-tauri/target/release/bundle/nsis/ED_0.1.0_x64-setup.exe`（约 48.9 MB）
+  - Portable：`tauri/release/ED-0.1.0-Portable.zip`（由 make-portable.ps1 生成，exe 名 ED.exe）
+  - 均为 2026-11-17 的更名后首版构建；`ED_SELFTEST=install` 冒烟通过（新数据目录 com.ahpx.ed：词库 25321 文件、index 14.7MB、settings 持久化正确）
+- **运行时数据**：`%APPDATA%/com.ahpx.ed/`（settings.json、index.json、stats.json、wordbooks.json、tts-cache/、dictionary/）；旧目录 com.ahpx.cdictionary 为历史遗留可自行删除
 
 ## 2. Git 约定
 - 提交身份：`git -c user.name=CDictionary -c user.email=dev@local commit ...`（本机无全局身份时用 -c 内联）
 - `.gitignore` 要点：排除 `node_modules/ dist/ dist-electron/ release/ target/ tauri/src-tauri/gen/`、根级 `dictionary/` 语料（5 万文件）、`*.zip`（**例外**：`!tauri/src-tauri/resources/dictionary.zip` 必须入库，它是随包词库）、`*.*log`
-- 提交历史：
-  1. `6c96643` 初始导入（electron 原版 + tauri 移植源码）
+- **远端**：`origin = https://github.com/Catsmum2025/ED.git`。⚠️ 2026-11-17 起 **electron/ 已从全部 git 历史中剔除**（filter-branch）且加入 .gitignore——远端仓库只含 Tauri 版；本地磁盘上的 `electron/` 目录保留作参考但不再入库。重写前的完整历史保存在本地 tag `archive/pre-ed-history`（勿推送）
+- 提交历史（下列 SHA 为 2026-11-17 历史重写**前**的存档值，见 tag `archive/pre-ed-history`；重写后 SHA 全部变化但顺序与信息不变）：
+  1. `6c96643` 初始导入（electron 原版 + tauri 移植源码；历史重写后 electron 路径已不存在）
   2. `548e767` Tauri 编译修复 + NSIS/portable 打包链路 + README
   3. `b590627` 解压词库功能修复（前端竞态、save 重试、单元测试、自检钩子、electron-builder.yml 补档）
   4. `b88b5c2` UI 重构一期：左侧竖向图标导航、全局面板占位、设置二级菜单、三档动效
@@ -36,26 +37,26 @@
 ### 构建
 ```powershell
 # 1) 先杀掉所有实例，否则链接/打包报 os error 5（拒绝访问）
-Get-Process cdictionary -ErrorAction SilentlyContinue | ForEach-Object { taskkill /pid $_.Id /T /F }
+Get-Process ed, cdictionary -ErrorAction SilentlyContinue | ForEach-Object { taskkill /pid $_.Id /T /F }
 # 2) 固定用 tauri CLI（会先跑 pnpm build 再 cargo release + NSIS），约 6-8 分钟
 Set-Location D:/trae/CDictionary/tauri; pnpm exec tauri build
 # 3) portable zip（Tauri 2.x 无内置 portable bundle 目标，脚本手动组装）
 powershell -ExecutionPolicy Bypass -File .\make-portable.ps1
 ```
-- **禁止裸 `cargo build --release`**：tauri-build 的最后一步在本机以“拒绝访问 (os error 5)”失败（debug 的 `cargo build`/`cargo test` 正常）。release 产物只经 `pnpm exec tauri build` 生成
+- **构建脚本偶发“拒绝访问 (os error 5)”**：tauri-build 构建脚本/链接阶段偶发失败（疑似杀软扫描 target 里的新 exe）。**解法：`cargo clean` 后重试即可**（2026-11-17 实测一次 clean 彻底解决）；先杀进程再构建可预防大部分
 - pnpm 安装时 esbuild 的 build script 警告可忽略（vite 构建正常）
 
 ### 验证（改完必跑）
 1. `cd src-tauri && cargo test --bins` —— 含对真实 dictionary.zip 的解压/flatten 单元测试与中文检索打分单测（约 25s）
-   - 可选（中文反查回归）：`$env:CDICTIONARY_TEST_DICT = "$env:APPDATA\com.ahpx.cdictionary\dictionary"` 后运行 `cargo test --bins chinese_search_against_real_dictionary_when_available -- --nocapture`；全量 2.5 万词条扫库受杀软 IO 影响可能很慢，可先拷约 400 个样本目录验证
-2. **无头端到端自检**：`CDICTIONARY_SELFTEST=install` 启动 release exe → 完整执行词库安装管线并打印后自动退出：
+   - 可选（中文反查回归）：`$env:ED_TEST_DICT = "$env:APPDATA\com.ahpx.ed\dictionary"` 后运行 `cargo test --bins chinese_search_against_real_dictionary_when_available -- --nocapture`；全量 2.5 万词条扫库受杀软 IO 影响可能很慢，可先拷约 400 个样本目录验证
+2. **无头端到端自检**：`ED_SELFTEST=install` 启动 release exe → 完整执行词库安装管线并打印后自动退出：
    ```powershell
-   $env:CDICTIONARY_SELFTEST = "install"
+   $env:ED_SELFTEST = "install"
    Start-Process <exe路径> -PassThru -RedirectStandardOutput out.log -RedirectStandardError err.log
-   # 等进程退出后再读 %APPDATA%\com.ahpx.cdictionary\settings.json 验证 dictionaryPath
+   # 等进程退出后再读 %APPDATA%\com.ahpx.ed\settings.json 验证 dictionaryPath
    ```
    ⚠️ 进程退出后 settings.json **可能还会被补写一次**（前端 watcher 的落盘在退出竞态中完成），读校验前 sleep 几秒或稍后重读，勿以第一瞬间的值定论
-3. GUI 冒烟：启动 exe，8 秒后 `Get-Process` 应存活且 MainWindowWindowTitle=CDictionary
+3. GUI 冒烟：启动 exe（ed.exe），8 秒后 `Get-Process` 应存活且 MainWindowWindowTitle=ED
 
 ## 5. 环境怪癖 / 踩坑记录
 - **PowerShell 重定向日志是 UTF-16LE**：`cmd *> file.log` 产物用 Node 读时要先 `new TextDecoder('utf-16le')`，失败再按 utf-8；曾因把乱码当“无错误”误判 cargo check 通过
@@ -92,6 +93,7 @@ powershell -ExecutionPolicy Bypass -File .\make-portable.ps1
    - Electron 原版：仓库缺 electron-builder 配置，装机版从未打进 dictionary.zip → 补 `electron/app/electron-builder.yml`（Electron 产物未重建）
    - 附带加固：save_settings 写盘重试（杀软锁文件场景）
    - 证据链：用户数据目录里 25321 个 json + settings.json 的 dictionaryPath 停留旧值；带日志构建抓到完整写入序列（phase3 save dest → 前端 settings_set(dest) → 落盘正确）
+7. **更名 ED + 开源合规 + git 重排**（2026-11-17）：全项目 CDictionary→ED（包名/identifier/标题/产物/环境变量，详见第 1 节）；新增 LICENSE(MIT)、README“词库来源与许可”（上游 ahpxex/open-dictionary，CC BY-SA 4.0 / wordfreq 署名）与致谢（ahpxex/actionary 想法原型）、关于页内嵌声明；把写死的开发机默认词库路径改为空串。git：electron/ 从全部历史剔除 + .gitignore 排除，重写前完整历史存于 tag `archive/pre-ed-history`，force push origin main。构建偶发 os error 5 用 `cargo clean` 解决
 
 ## 8. 已知差异 / 待办候选
 - apiKey 明文存 settings.json（Electron 用 safeStorage/DPAPI，Tauri 无等价 API；可考虑迁移到 keyring 插件）

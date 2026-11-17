@@ -105,7 +105,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   uiScale: 100,
   motion: 'lively',
   hideScrollbar: true,
-  dictionaryPath: 'd:\\trae\\CDictionary\\dictionary',
+  dictionaryPath: '',
   llm: {
     baseURL: 'http://127.0.0.1:8080/v1',
     apiKey: '',

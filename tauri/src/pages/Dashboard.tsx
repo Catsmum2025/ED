@@ -3,7 +3,7 @@ import { PageHeader } from '../components/PageHeader';
 import { useT } from '../i18n';
 
 /**
- * Global dashboard — the future hub that ties CDictionary together with the
+ * Global dashboard — the future hub that ties ED together with the
  * other apps in the suite. Intentionally a placeholder for now.
  */
 export function DashboardPage() {

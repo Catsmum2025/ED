@@ -11,7 +11,7 @@ use serde_json::Value;
 
 use crate::state;
 
-pub const DEFAULT_DICTIONARY_PATH: &str = "d:\\trae\\CDictionary\\dictionary";
+pub const DEFAULT_DICTIONARY_PATH: &str = "";
 pub const DEFAULT_PREFIX_PROMPT: &str = "请将以下内容翻译为{dir}，仅输出译文，不要任何修饰或补充：";
 pub const DEFAULT_VOICE: &str = "voice_28";
 
