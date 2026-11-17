@@ -10,14 +10,15 @@ interface HotkeyRecorderProps {
   onChange: (accelerator: string | null) => void;
 }
 
-/** Translate a browser KeyboardEvent into an Electron accelerator string.
- *  Examples: "Ctrl+Shift+D", "Alt+T", "CommandOrControl+Alt+T". */
+/** Translate a browser KeyboardEvent into an accelerator string.
+ *  Windows-only app, so the modifier is always spelled "Ctrl"
+ *  (examples: "Ctrl+Shift+D", "Alt+T"). */
 function toAccelerator(e: KeyboardEvent): string | null {
   // Ignore pure modifier presses (just Ctrl / Alt / Shift).
   if (['Control', 'Shift', 'Alt', 'Meta'].includes(e.key)) return null;
 
   const parts: string[] = [];
-  if (e.ctrlKey || e.metaKey) parts.push('CommandOrControl');
+  if (e.ctrlKey || e.metaKey) parts.push('Ctrl');
   if (e.altKey) parts.push('Alt');
   if (e.shiftKey) parts.push('Shift');
 
@@ -33,8 +34,13 @@ function toAccelerator(e: KeyboardEvent): string | null {
   return parts.join('+');
 }
 
+/** Older builds stored "CommandOrControl" (Electron style); show it as Ctrl. */
+function displayAccelerator(value: string): string {
+  return value.replace(/CommandOrControl/gi, 'Ctrl');
+}
+
 /** A button that, when focused/active, listens for the next key combo and
- *  records it as an Electron accelerator. Includes a clear button. */
+ *  records it as a global-hotkey accelerator. Includes a clear button. */
 export function HotkeyRecorder({ label, description, value, onChange }: HotkeyRecorderProps) {
   const t = useT();
   const [recording, setRecording] = useState(false);
@@ -99,7 +105,7 @@ export function HotkeyRecorder({ label, description, value, onChange }: HotkeyRe
           ) : value ? (
             <>
               <Keyboard className="w-4 h-4 mr-1.5" />
-              <kbd className="font-mono">{value}</kbd>
+              <kbd className="font-mono">{displayAccelerator(value)}</kbd>
             </>
           ) : (
             <>

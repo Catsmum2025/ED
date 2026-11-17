@@ -94,8 +94,8 @@ impl Default for AppSettings {
     fn default() -> Self {
         Self {
             theme: "system".into(),
-            accent_color: "teal".into(),
-            custom_accent_color: "#30524E".into(),
+            accent_color: "custom".into(),
+            custom_accent_color: "#5c5897".into(),
             language: "zh-CN".into(),
             ui_scale: 100.0,
             motion: "lively".into(),

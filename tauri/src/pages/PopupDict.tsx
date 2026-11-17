@@ -86,7 +86,7 @@ export function PopupDictPage() {
       onSwitch={() => selected ? { route: '/dictionary', query: { word: selected.word } } : { route: '/dictionary' }}
     >
       <div className="p-3 space-y-2">
-        <div className="flex items-center gap-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 focus-within:border-accent">
+        <div className="flex items-center gap-2 rounded-xl border field-tint px-3 py-2">
           <Search className="w-4 h-4 text-slate-400 shrink-0" />
           <input
             ref={inputRef}

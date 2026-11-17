@@ -178,9 +178,9 @@ export function Select({
           onClick={() => (open ? close() : openMenu())}
           onKeyDown={handleKeyDown}
           className={cn(
-            'group flex w-full items-center justify-between gap-2 rounded-xl border bg-white px-3.5 py-2.5 text-left text-sm text-slate-900 outline-none transition-colors duration-200 dark:bg-slate-900 dark:text-slate-100',
-            'border-slate-200/80 dark:border-slate-700/80',
-            'hover:border-slate-300 dark:hover:border-slate-600',
+            'group flex w-full items-center justify-between gap-2 rounded-xl border bg-accent/10 px-3.5 py-2.5 text-left text-sm text-slate-900 outline-none transition-colors duration-200 dark:bg-accent/20 dark:text-slate-100',
+            'border-accent/25 dark:border-accent/30',
+            'hover:border-accent/40 dark:hover:border-accent/50',
             'focus-visible:border-accent focus-visible:ring-4 ring-accent/15',
             open && 'border-accent ring-4 ring-accent/15',
             disabled && 'cursor-not-allowed opacity-50',

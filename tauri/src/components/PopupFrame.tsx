@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react';
+import { getCurrentWindow } from '@tauri-apps/api/window';
 import { ArrowRight, X } from 'lucide-react';
 import { api } from '../ipc';
 import { useT } from '../i18n';
@@ -35,6 +36,16 @@ export function PopupFrame({ title, onSwitch, canSwitch = true, children }: Popu
     await api.window.switchToMain(route, query);
   };
 
+  // Frameless windows have no OS title bar, so the custom bar must start the
+  // drag itself. Doing it from mousedown (instead of relying only on
+  // data-tauri-drag-region) also covers clicks that land on the title text.
+  const handleDragStart = (event: React.MouseEvent) => {
+    if (event.button !== 0) return;
+    if ((event.target as HTMLElement).closest('button')) return;
+    event.preventDefault();
+    void getCurrentWindow().startDragging().catch(() => {});
+  };
+
   // Resize the BrowserWindow whenever the content height changes so the popup
   // always shows the full page (no internal scrollbar).
   useEffect(() => {
@@ -58,10 +69,10 @@ export function PopupFrame({ title, onSwitch, canSwitch = true, children }: Popu
     <div ref={rootRef} className="flex flex-col bg-white dark:bg-slate-950 text-slate-900 dark:text-slate-100 select-none">
       {/* Drag region / custom title bar — accent-tinted to tie popups to the theme. */}
       <div
-        className="flex items-center justify-between px-3 h-9 border-b border-accent/20 bg-accent-tint"
-        data-tauri-drag-region
+        onMouseDown={handleDragStart}
+        className="flex h-9 cursor-grab items-center justify-between border-b border-accent/20 bg-accent-tint px-3 active:cursor-grabbing"
       >
-        <span className="text-xs font-medium text-accent truncate">{title}</span>
+        <span className="pointer-events-none truncate text-xs font-medium text-accent">{title}</span>
         <div className="flex items-center gap-1">
           {canSwitch && onSwitch && (
             <button

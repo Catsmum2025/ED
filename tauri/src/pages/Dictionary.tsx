@@ -25,6 +25,9 @@ export function DictionaryPage() {
   const [genError, setGenError] = useState<string | null>(null);
   const [randomWord, setRandomWord] = useState<WordDefinition | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  /** Set when the query was seeded programmatically (popup hand-off) so the
+   *  suggestion dropdown stays closed until the user actually types. */
+  const suppressSuggestRef = useRef(false);
   const { llm, experimental } = useSettingsStore();
   const [searchParams, setSearchParams] = useSearchParams();
   const aiGenEnabled = experimental.aiWordGeneration;
@@ -113,6 +116,10 @@ export function DictionaryPage() {
   useEffect(() => {
     const word = searchParams.get('word');
     if (word) {
+      // The word arrives from the popup's "switch to main" button. Mark it so
+      // the debounced search does not open the suggestion dropdown on top of
+      // the entry the user just asked for.
+      suppressSuggestRef.current = true;
       setQuery(word);
       handleSearch(word);
       setSearchParams({}, { replace: true });
@@ -147,6 +154,11 @@ export function DictionaryPage() {
     const timer = setTimeout(async () => {
       setZhNoResult(null);
       if (!query.trim() || indexing) {
+        setCandidates([]);
+        return;
+      }
+      if (suppressSuggestRef.current) {
+        suppressSuggestRef.current = false;
         setCandidates([]);
         return;
       }
@@ -232,12 +244,15 @@ export function DictionaryPage() {
             </div>
           </div>
         )}
-        <div className="flex items-center gap-2.5 rounded-2xl border border-slate-200/80 dark:border-slate-700/80 bg-white dark:bg-slate-900 pl-5 pr-2 py-2 shadow-card focus-within:border-accent focus-within:ring-4 ring-accent/15 transition-all">
+        <div className="flex items-center gap-2.5 rounded-2xl border field-tint pl-5 pr-2 py-2 shadow-card transition-all">
           <Search className="w-5 h-5 text-slate-400 shrink-0" />
           <input
             ref={inputRef}
             value={query}
-            onChange={(e) => setQuery(e.target.value)}
+            onChange={(e) => {
+              suppressSuggestRef.current = false;
+              setQuery(e.target.value);
+            }}
             onKeyDown={handleKeyDown}
             placeholder={t('dict.searchPlaceholder')}
             className="flex-1 bg-transparent outline-none text-base text-slate-900 dark:text-slate-100 placeholder:text-slate-400"
@@ -477,7 +492,7 @@ export function DictionaryPage() {
                               if (e.key === 'Enter' && !newBookCreating) handleCreateBook();
                             }}
                             placeholder={t('dict.newBookPlaceholder')}
-                            className="flex-1 min-w-0 text-sm bg-transparent outline-none text-slate-700 dark:text-slate-200 placeholder:text-slate-400"
+                            className="flex-1 min-w-0 rounded-lg border field-tint px-2 py-1 text-sm text-slate-700 outline-none placeholder:text-slate-400 dark:text-slate-200"
                           />
                           <button
                             onClick={handleCreateBook}

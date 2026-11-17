@@ -77,7 +77,7 @@ export function TranslatePage() {
             onChange={(e) => setText(e.target.value)}
             placeholder={t('translate.placeholder')}
             rows={6}
-            className="w-full rounded-xl border border-slate-200/80 dark:border-slate-700/80 bg-slate-50/50 dark:bg-slate-800/40 dark:text-slate-100 p-3.5 text-sm focus:outline-none focus:border-accent focus:ring-4 ring-accent/15 transition-all resize-none placeholder:text-slate-400"
+            className="w-full resize-none rounded-xl border field-tint p-3.5 text-sm text-slate-900 outline-none transition-all placeholder:text-slate-400 dark:text-slate-100"
           />
           <div className="mt-3 flex justify-end">
             <Button onClick={handleTranslate} disabled={loading || !llm.model}>

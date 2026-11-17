@@ -6,8 +6,12 @@
    Design tokens
    ────────────────────────────────────────────────────────────── */
 :root {
-  --accent: #2563eb;
-  --accent-hover: #1d4ed8;
+  /* Default brand accent (overridden at runtime from settings). Keep the raw
+     channels in sync: Tailwind's accent utilities read --accent-rgb. */
+  --accent: #5c5897;
+  --accent-rgb: 92 88 151;
+  --accent-hover: #4d4a7f;
+  --accent-contrast: #ffffff;
   /* One radius scale: 8px chips, 12px controls, 16px surfaces. */
   --radius: 12px;
   --radius-sm: 8px;
@@ -506,6 +510,21 @@ body {
 }
 .list-row-active .list-row-primary {
   color: var(--accent);
+}
+
+/* Inputs share one tinted treatment so every field reads as part of the
+   accent palette instead of a plain white box. */
+.field-tint {
+  background-color: color-mix(in srgb, var(--accent) 10%, transparent);
+  border-color: color-mix(in srgb, var(--accent) 25%, transparent);
+}
+.field-tint:hover {
+  border-color: color-mix(in srgb, var(--accent) 40%, transparent);
+}
+.field-tint:focus,
+.field-tint:focus-within {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 15%, transparent);
 }
 
 /* Legacy nav hover helper kept for any remaining consumers. */

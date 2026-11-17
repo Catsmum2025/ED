@@ -59,7 +59,7 @@ export function WordManager() {
         <CardDescription>{t('settings.wordManager.desc')}</CardDescription>
       </CardHeader>
       <CardContent className="space-y-3">
-        <div className="flex items-center gap-2 rounded-xl border border-slate-200/80 dark:border-slate-700/80 bg-white dark:bg-slate-900 pl-3.5 pr-2 py-2 focus-within:border-accent focus-within:ring-4 ring-accent/15 transition-all">
+        <div className="flex items-center gap-2 rounded-xl border field-tint pl-3.5 pr-2 py-2 transition-all">
           <Search className="w-4 h-4 text-slate-400 shrink-0" />
           <input
             ref={inputRef}

@@ -108,7 +108,7 @@ export function BooksPage() {
                 }}
                 autoFocus
                 placeholder={t('books.newBookPlaceholder')}
-                className="w-full max-w-md px-3.5 py-2 rounded-lg bg-slate-50 dark:bg-slate-800/70 border border-slate-200/60 dark:border-slate-700/60 text-sm text-slate-900 dark:text-slate-100 outline-none focus:border-accent focus:ring-2 focus:ring-accent/15 transition-all"
+                className="w-full max-w-md rounded-lg border field-tint px-3.5 py-2 text-sm text-slate-900 outline-none transition-all dark:text-slate-100"
               />
             </div>
 
@@ -153,7 +153,7 @@ export function BooksPage() {
                         onChange={(e) => setEditName(e.target.value)}
                         disabled={b.id === DEFAULT_BOOK_ID}
                         placeholder={t('books.bookNamePlaceholder')}
-                        className="w-full px-3 py-2 rounded-lg bg-slate-50 dark:bg-slate-800/70 border border-slate-200/60 dark:border-slate-700/60 text-sm text-slate-900 dark:text-slate-100 outline-none focus:border-accent focus:ring-2 focus:ring-accent/15 disabled:opacity-60"
+                        className="w-full rounded-lg border field-tint px-3 py-2 text-sm text-slate-900 outline-none disabled:opacity-60 dark:text-slate-100"
                       />
                       <CoverPicker value={editCover} onChange={setEditCover} />
                       <div className="flex items-center gap-2">

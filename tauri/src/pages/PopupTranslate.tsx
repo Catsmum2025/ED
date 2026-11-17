@@ -75,7 +75,7 @@ export function PopupTranslatePage() {
           onKeyDown={handleKeyDown}
           placeholder={t('popup.translate.placeholder')}
           rows={3}
-          className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-sm focus:outline-none focus:border-accent resize-none"
+          className="w-full resize-none rounded-xl border field-tint px-3 py-2 text-sm outline-none"
         />
         <div className="flex justify-end">
           <button

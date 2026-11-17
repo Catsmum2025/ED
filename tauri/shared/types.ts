@@ -106,8 +106,8 @@ export interface AppSettings {
 
 export const DEFAULT_SETTINGS: AppSettings = {
   theme: 'system',
-  accentColor: 'teal',
-  customAccentColor: '#30524E',
+  accentColor: 'custom',
+  customAccentColor: '#5c5897',
   language: 'zh-CN',
   uiScale: 100,
   motion: 'lively',
