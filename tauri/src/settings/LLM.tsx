@@ -85,7 +85,7 @@ export function LLMSettings() {
             label={t('settings.llm.baseUrl')}
             value={llm.baseURL}
             onChange={(e) => update({ llm: { ...llm, baseURL: e.target.value } })}
-            placeholder="http://127.0.0.1:8080/v1"
+            placeholder="http://127.0.0.1:8888/v1"
           />
           <Input
             label={t('settings.llm.apiKey')}

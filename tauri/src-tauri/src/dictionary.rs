@@ -20,10 +20,14 @@ use tauri::State;
 use crate::state;
 use crate::AppState;
 
-const INDEX_VERSION: u32 = 4;
+const INDEX_VERSION: u32 = 5;
 const INDEX_MAGIC: &[u8; 4] = b"EDIX";
 /// Field separator between the display concise and the searchable text.
 const FIELD_SEP: char = '\u{1f}';
+/// Bit set in `Record::tag_mask` when the entry has a full learner entry
+/// (ECDICT `isnormal = 1`: explanations + example sentences). Tag bits are
+/// 1/2/4/8, so 1 << 16 stays clear of them.
+const NORMAL_BIT: u32 = 1 << 16;
 
 /// True while a (re)index is running. Commands return empty results instead of
 /// blocking the UI behind the dictionary mutex for minutes.
@@ -127,7 +131,8 @@ struct Record {
     file_len: u32,
     zh_off: u32,
     zh_len: u32,
-    /// Bitmask of common exam tags (zk/gk/cet4/cet6/ky/...) used for ranking.
+    /// Bitmask of common exam tags (zk/gk/cet4/cet6/ky/...) used for ranking,
+    /// plus `NORMAL_BIT` for entries with a full learner entry.
     tag_mask: u32,
 }
 
@@ -291,6 +296,10 @@ pub(crate) struct BuildEntry {
     file_name: String,
     search_text: String,
     tag_mask: u32,
+    /// ECDICT `isnormal = 1` (or a legacy entry without the field): has full
+    /// explanations and example sentences, so it is worth showing as a random
+    /// word and is ranked slightly higher in Chinese lookup.
+    normal: bool,
 }
 
 fn tag_mask_from(tags: &[String]) -> u32 {
@@ -350,8 +359,13 @@ pub(crate) fn build_entry_from_json(file_name: &str, raw: &str) -> Option<BuildE
             search_text.push_str(&d.explanation_cn);
         }
     }
-    let tag_mask = tag_mask_from(&data.tags);
-    Some(BuildEntry { word: data.word, file_name: file_name.to_string(), search_text, tag_mask })
+    // isnormal = 0 entries only carry translation/definition; they are still
+    // searchable and displayable (normalize_entry synthesises the cards), but
+    // they are not offered as "random word" candidates.
+    let normal = data.isnormal != Some(0);
+    let mut tag_mask = tag_mask_from(&data.tags);
+    if normal { tag_mask |= NORMAL_BIT; }
+    Some(BuildEntry { word: data.word, file_name: file_name.to_string(), search_text, tag_mask, normal })
 }
 
 fn build_one(path: &Path, file_name: &str) -> Option<BuildEntry> {
@@ -408,7 +422,7 @@ pub(crate) fn finalize_index(dictionary_path: &str, mut entries: Vec<BuildEntry>
             file_len: e.file_name.len() as u32,
             zh_off,
             zh_len: e.search_text.len() as u32,
-            tag_mask: e.tag_mask,
+            tag_mask: e.tag_mask | if e.normal { NORMAL_BIT } else { 0 },
         });
     }
 
@@ -522,19 +536,28 @@ impl DictionaryService {
 
     pub fn get_random_word(&self) -> Option<WordDefinition> {
         let idx = self.index.as_ref()?;
-        if idx.records.is_empty() { return None; }
+        let total = idx.records.len();
+        if total == 0 { return None; }
         use rand::Rng;
         let mut rng = rand::thread_rng();
-        for _ in 0..24 {
-            let i = rng.gen_range(0..idx.records.len());
-            if let Some(data) = self.read_entry(i) {
-                if data.definitions.iter().any(|d| !d.example_en.is_empty()) {
-                    return Some(data);
-                }
-            }
-        }
-        for _ in 0..8 {
-            let i = rng.gen_range(0..idx.records.len());
+
+        // ECDICT only enriches a small fraction of its entries (isnormal = 1).
+        // Those carry explanations and example sentences, so picking from them
+        // keeps the "random word" card complete and costs a single file read —
+        // probing random entries used to fail ~24 times and then fall back.
+        let pool: Vec<u32> = idx
+            .records
+            .iter()
+            .enumerate()
+            .filter_map(|(i, r)| if r.tag_mask & NORMAL_BIT != 0 { Some(i as u32) } else { None })
+            .collect();
+        let has_pool = !pool.is_empty();
+        for _ in 0..4 {
+            let i = if has_pool {
+                pool[rng.gen_range(0..pool.len())] as usize
+            } else {
+                rng.gen_range(0..total)
+            };
             if let Some(data) = self.read_entry(i) {
                 return Some(data);
             }
@@ -586,7 +609,8 @@ impl DictionaryService {
                 file_len: file_name.len() as u32,
                 zh_off,
                 zh_len: search_text.len() as u32,
-                tag_mask: tag_mask_from(&normalized.tags),
+                tag_mask: tag_mask_from(&normalized.tags)
+                    | if normalized.isnormal != Some(0) { NORMAL_BIT } else { 0 },
             };
             match idx.find_exact(&normalized.word) {
                 Some(i) => idx.records[i] = rec,
@@ -890,7 +914,7 @@ fn score_chinese_index(
                 None => true,
                 Some(c) => matches!(
                     c,
-                    ',' | '，' | ';' | '；' | '、' | ' ' | '。' | ':' | '：' | '的' | ')' | '）'
+                    ',' | '，' | ';' | '；' | '、' | ' ' | '\n' | '。' | ':' | '：' | '的' | ')' | '）'
                 ),
             };
             best = 1200 + if boundary { 120 } else { 0 } + pos_bonus;
@@ -1006,10 +1030,24 @@ fn synthesize_definitions(translation: &str, definition: &str) -> Vec<DefEntry> 
     defs
 }
 
+/// ECDICT dict_json stores line breaks double-escaped: the file contains
+/// backslash-backslash-n, so after JSON parsing the string holds a literal
+/// backslash + "n" instead of a newline. Turn those back into real line breaks,
+/// otherwise the whole translation collapses into one unreadable card.
+fn unescape_literal_newlines(s: &str) -> String {
+    if !s.contains("\\n") && !s.contains("\\r") {
+        return s.to_string();
+    }
+    s.replace("\\r\\n", "\n").replace("\\n", "\n").replace("\\r", "\n")
+}
+
 fn normalize_entry(mut d: WordDefinition) -> WordDefinition {
     if d.pronunciation.trim().is_empty() {
         d.pronunciation = d.phonetic.trim().to_string();
     }
+    d.translation = unescape_literal_newlines(&d.translation);
+    d.definition = unescape_literal_newlines(&d.definition);
+    d.concise_definition = unescape_literal_newlines(&d.concise_definition);
     if d.concise_definition.trim().is_empty() {
         d.concise_definition = concise_from_translation(&d.translation);
     } else {
@@ -1269,6 +1307,64 @@ mod tests {
         let _ = fs::remove_dir_all(&dir);
     }
 
+    /// ECDICT rows with isnormal = 0 only carry a translation (and optionally an
+    /// English definition). They must still open as normal definition cards.
+    #[test]
+    fn ecdict_isnormal_zero_keeps_basic_definitions() {
+        // Double-escaped separators, exactly as the real dict_json files store them.
+        let raw = r#"{"word":"'hood","phonetic":"hʊd","translation":"n. 罩；风帽\\nv. 覆盖；用头巾包\\n[网络] 兜帽","definition":"","tags":[],"exchange":"","definitions":[],"isnormal":0}"#;
+        let n = normalize_entry(serde_json::from_str::<WordDefinition>(raw).unwrap());
+        assert_eq!(n.definitions.len(), 3, "translation lines become cards");
+        assert_eq!(n.definitions[0].pos, "n.");
+        assert!(n.definitions[0].explanation_cn.contains("风帽"));
+        assert_eq!(n.definitions[1].pos, "v.");
+        assert_eq!(n.definitions[2].pos, "[网络]");
+        assert!(n.definitions[0].explanation_en.is_empty());
+        assert!(!n.concise_definition.contains("\\n"), "concise must not keep the literal escape");
+        assert!(n.concise_definition.starts_with("n. 罩"));
+
+        // English-only rows (no translation at all) still show something.
+        let raw = r#"{"word":"aa","translation":"","definition":"n. a dry form of lava","isnormal":0}"#;
+        let n = normalize_entry(serde_json::from_str::<WordDefinition>(raw).unwrap());
+        assert_eq!(n.definitions.len(), 1);
+        assert!(n.definitions[0].explanation_en.contains("lava"));
+        assert!(n.definitions[0].explanation_cn.is_empty());
+    }
+
+    /// "Random word" only draws from full entries (isnormal = 1), so it never
+    /// lands on a translation-only stub and only reads one file per call.
+    #[test]
+    fn random_word_prefers_full_entries() {
+        let dir = std::env::temp_dir().join("edict-random-test");
+        let _ = fs::remove_dir_all(&dir);
+        fs::create_dir_all(&dir).unwrap();
+        let full = r#"{"word":"apple","translation":"n. 苹果","definition":"n. fruit",
+            "definitions":[{"pos":"noun","explanation_en":"A fruit.","explanation_cn":"苹果。",
+            "example_en":"I ate an apple.","example_cn":"我吃了一个苹果。"}],"isnormal":1}"#;
+        fs::write(dir.join("apple.json"), full).unwrap();
+        for name in ["'hood", "aa", "zzz"] {
+            fs::write(
+                dir.join(format!("{name}.json")),
+                format!(r#"{{"word":"{name}","translation":"n. 测试","isnormal":0}}"#),
+            ).unwrap();
+        }
+
+        let dir_str = dir.to_string_lossy().to_string();
+        let idx = build_index(&dir_str, None);
+        assert_eq!(idx.records.len(), 4);
+        let svc = DictionaryService {
+            dictionary_path: dir_str.clone(),
+            index_path: dir.join("index.bin"),
+            index: Some(idx),
+        };
+        for _ in 0..16 {
+            let w = svc.get_random_word().expect("a random word");
+            assert_eq!(w.word, "apple", "only the isnormal = 1 entry is eligible");
+            assert!(!w.definitions[0].example_en.is_empty());
+        }
+        let _ = fs::remove_dir_all(&dir);
+    }
+
     /// Opt-in full build: EDICT_TEST_DICT must point at a directory (defaults to
     /// D:/ecdict/dict_json/dict_json when present). Excluded from normal runs.
     #[test]
@@ -1314,5 +1410,33 @@ mod tests {
         let t = std::time::Instant::now();
         let detail = svc.get_word("apple");
         println!("get_word apple in {:?}: {:?}", t.elapsed(), detail.map(|d| (d.phonetic, d.definitions.len())));
+
+        let normal = idx.records.iter().filter(|r| r.tag_mask & NORMAL_BIT != 0).count();
+        println!("normal (isnormal=1) entries: {normal} / {}", idx.records.len());
+
+        // A translation-only entry must still open with usable definitions.
+        if let Some(i) = (0..idx.records.len()).find(|i| idx.records[*i].tag_mask & NORMAL_BIT == 0) {
+            let t = std::time::Instant::now();
+            if let Some(d) = svc.read_entry(i) {
+                println!(
+                    "isnormal=0 sample {:?} in {:?}: concise={:?} cards={} first_cn={:?} first_en={:?}",
+                    d.word,
+                    t.elapsed(),
+                    d.concise_definition,
+                    d.definitions.len(),
+                    d.definitions.first().map(|x| &x.explanation_cn),
+                    d.definitions.first().map(|x| &x.explanation_en),
+                );
+            }
+        }
+
+        let t = std::time::Instant::now();
+        let mut words = Vec::new();
+        for _ in 0..5 {
+            if let Some(w) = svc.get_random_word() {
+                words.push(w.word);
+            }
+        }
+        println!("5 random words in {:?}: {:?}", t.elapsed(), words);
     }
 }

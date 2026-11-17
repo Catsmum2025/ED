@@ -82,7 +82,8 @@ powershell -ExecutionPolicy Bypass -File .\make-portable.ps1
 - **动效三档**：settings.motion（lively/calm/performance）→ SettingsLoader 写到 `<html data-motion>` → index.css 的 --dur/--ease/--page-shift 等令牌驱动全部动画；performance 档全局 1ms 并去掉导航毛玻璃
 - **中文反查**：dictionary.rs 的 `normalize_chinese_query`（剥离“怎么说/的英文/是什么意思”等问法）+ `score_chinese`（concise 加权、短语 > 起始 > 包含 > 相邻 bigram ≥50% > 字符覆盖 ≥60%，长度惩罚）；前端回车直接取排名第一的候选
 
-- **ECDICT 大词库适配（分支 feat/ecdict-770k）**：支持 dict_json 单词语义（phonetic/translation/definition/tags/exchange）；索引改为二进制 index.bin（紧凑 blob + 记录表，770k 约 90 MB，加载 ~0.2 s）；索引构建用 rayon 分批并行（770k 本机约 4 分钟）；中文排序 = 词头 POS 40 + 首义边界 120 + 常用标签（zk/gk +60、cet4/cet6 +20、ky/toefl/ielts/gre +10、任意 +30），例句不入索引；导入 zip 时解压与解析同趟完成（extract_and_build），设置页支持“导入词库压缩包”；建索引期间 INDEXING 置位，dict_* 命令快速返回空而不是阻塞；路径变更后后台重建
+- **ECDICT 大词库适配（已并入 main）**：支持 dict_json 单词语义（phonetic/translation/definition/tags/exchange）；isnormal=0 的词条只有 translation/definition，读取时由 normalize_entry 拆成释义卡，因此照样能查、能看基础释义；isnormal=1 的词条在索引里置 `NORMAL_BIT`（1<<16，与标签位共存），"每日随机"只从这些词条抽（一次文件读取，不再连续试探 24 次）；索引改为二进制 index.bin（紧凑 blob + 记录表，770k 约 115 MB，加载 ~0.2 s；INDEX_VERSION=5，旧索引自动重建）；索引构建用 rayon 分批并行（770k 本机约 4 分钟）；中文排序 = 词头 POS 40 + 首义边界 120 + 常用标签（zk/gk +60、cet4/cet6 +20、ky/toefl/ielts/gre +10、任意 +30），例句不入索引；导入 zip 时解压与解析同趟完成（extract_and_build），设置页支持“导入词库压缩包”；建索引期间 INDEXING 置位，dict_* 命令快速返回空而不是阻塞；路径变更后后台重建
+- **AI 生成词条**：word_gen_prompt.md 面向本地 OpenAI 兼容模型重写（输出契约、字段约束、释义/例句/辨析要求）；llm.rs 依次尝试 response_format=json_schema → json_object → 不传，本地端点（127.0.0.1/localhost）额外带 chat_template_kwargs.enable_thinking=false，服务端拒绝时自动去掉。实测 Unsloth Studio (127.0.0.1:8888, Qwen3.8-Flash-Next) 约 45 s 返回合法 JSON
 - **ECDICT 回归**：`$env:EDICT_TEST_DICT='D:\ecdict\dict_json\dict_json'; cargo test --bins build_full_ecdict_index_when_available -- --ignored --nocapture`（约 4 分钟）；小样本可设 EDICT_TEST_MIN 并把变量指向 ~1000 个 JSON 的目录
 
 ## 7. 历史工作时间线

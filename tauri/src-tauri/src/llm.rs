@@ -250,60 +250,44 @@ fn extract_json_object(text: &str) -> Result<Value, String> {
     serde_json::from_str(&candidate[start..=end]).map_err(|e| format!("AI 返回格式无效: {e}"))
 }
 
-#[tauri::command]
-pub async fn dict_generate_word(app_state: State<'_, AppState>, word: String) -> Result<WordDefinition, String> {
-    let (base_url, api_key, model) = {
-        let s = app_state.settings.lock().unwrap();
-        (s.llm.base_url.clone(), s.llm.api_key.clone(), s.llm.model.clone())
-    };
-    if model.is_empty() || base_url.is_empty() {
-        return Err("请先在设置中配置大语言模型".into());
-    }
+fn is_local_endpoint(base_url: &str) -> bool {
+    let u = base_url.trim().to_ascii_lowercase();
+    ["127.0.0.1", "localhost", "[::1]", "0.0.0.0"]
+        .iter()
+        .any(|host| u.contains(host))
+}
 
-    let url = format!("{}/chat/completions", trim_base(&base_url));
-    let body = json!({
-        "model": model,
-        "messages": [
-            { "role": "system", "content": WORD_GEN_PROMPT },
-            { "role": "user", "content": word },
-        ],
-        "stream": false,
-        "temperature": 0.1,
-        "response_format": { "type": "json_schema", "json_schema": word_gen_schema() },
-    });
-    let res = auth(reqwest::Client::new().post(&url).json(&body), &api_key)
-        .send()
-        .await
-        .map_err(|e| format!("请求失败: {e}"))?;
-    if !res.status().is_success() {
-        let status = res.status().as_u16();
-        let text = res.text().await.unwrap_or_default();
-        return Err(format!("请求失败 ({}): {}", status, text));
+fn shorten(text: &str, max: usize) -> String {
+    let mut out: String = text.chars().take(max).collect();
+    if text.chars().count() > max {
+        out.push('…');
     }
-    let data: Value = res.json().await.map_err(|e| format!("响应解析失败: {e}"))?;
-    let content = data
-        .pointer("/choices/0/message/content")
-        .and_then(|c| c.as_str())
-        .unwrap_or("")
-        .to_string();
-    if content.is_empty() {
-        return Err("AI 返回为空".into());
-    }
+    out
+}
 
-    let parsed = extract_json_object(&content)?;
+/// Map the model JSON onto a WordDefinition. Pulled out of the command so the
+/// response-format fallback loop can reuse it.
+fn word_definition_from_json(parsed: &Value, fallback_word: &str) -> Result<WordDefinition, String> {
     let defs_v = parsed.get("definitions").and_then(|d| d.as_array());
     let defs_v = match defs_v {
         Some(d) if !d.is_empty() => d,
         _ => return Err("AI 返回的释义为空或格式无效".into()),
     };
 
-    let definitions: Vec<DefEntry> = defs_v.iter().map(|d| DefEntry {
-        pos: d.get("pos").and_then(|v| v.as_str()).unwrap_or("").to_string(),
-        explanation_en: d.get("explanation_en").and_then(|v| v.as_str()).unwrap_or("").to_string(),
-        explanation_cn: d.get("explanation_cn").and_then(|v| v.as_str()).unwrap_or("").to_string(),
-        example_en: d.get("example_en").and_then(|v| v.as_str()).unwrap_or("").to_string(),
-        example_cn: d.get("example_cn").and_then(|v| v.as_str()).unwrap_or("").to_string(),
-    }).collect();
+    let definitions: Vec<DefEntry> = defs_v
+        .iter()
+        .map(|d| DefEntry {
+            pos: d.get("pos").and_then(|v| v.as_str()).unwrap_or("").trim().to_string(),
+            explanation_en: d.get("explanation_en").and_then(|v| v.as_str()).unwrap_or("").trim().to_string(),
+            explanation_cn: d.get("explanation_cn").and_then(|v| v.as_str()).unwrap_or("").trim().to_string(),
+            example_en: d.get("example_en").and_then(|v| v.as_str()).unwrap_or("").trim().to_string(),
+            example_cn: d.get("example_cn").and_then(|v| v.as_str()).unwrap_or("").trim().to_string(),
+        })
+        .filter(|d| !d.explanation_en.is_empty() || !d.explanation_cn.is_empty())
+        .collect();
+    if definitions.is_empty() {
+        return Err("AI 返回的释义为空或格式无效".into());
+    }
 
     // Empty forms/comparison are omitted to stay consistent with hand-written entries.
     let forms: Option<HashMap<String, String>> = parsed
@@ -331,7 +315,7 @@ pub async fn dict_generate_word(app_state: State<'_, AppState>, word: String) ->
         .filter(|v| !v.is_empty());
 
     Ok(WordDefinition {
-        word: parsed.get("word").and_then(|w| w.as_str()).filter(|w| !w.is_empty()).unwrap_or(&word).to_string(),
+        word: parsed.get("word").and_then(|w| w.as_str()).filter(|w| !w.is_empty()).unwrap_or(fallback_word).to_string(),
         pronunciation: parsed.get("pronunciation").and_then(|v| v.as_str()).unwrap_or("").to_string(),
         concise_definition: parsed.get("concise_definition").and_then(|v| v.as_str()).unwrap_or("").to_string(),
         forms,
@@ -339,4 +323,99 @@ pub async fn dict_generate_word(app_state: State<'_, AppState>, word: String) ->
         comparison,
         ..Default::default()
     })
+}
+
+#[tauri::command]
+pub async fn dict_generate_word(app_state: State<'_, AppState>, word: String) -> Result<WordDefinition, String> {
+    let (base_url, api_key, model) = {
+        let s = app_state.settings.lock().unwrap();
+        (s.llm.base_url.clone(), s.llm.api_key.clone(), s.llm.model.clone())
+    };
+    if model.is_empty() || base_url.is_empty() {
+        return Err("请先在设置中配置大语言模型 (设置 → 大语言模型)".into());
+    }
+
+    let url = format!("{}/chat/completions", trim_base(&base_url));
+    let schema = word_gen_schema();
+    // json_schema is the strictest and is understood by most OpenAI-compatible
+    // servers (vLLM, llama.cpp, LM Studio, Unsloth Studio); some only take
+    // json_object, and a few reject response_format altogether. Walk from
+    // strict to loose, remembering the last error for the UI.
+    let formats: [Option<Value>; 3] = [
+        Some(json!({ "type": "json_schema", "json_schema": schema })),
+        Some(json!({ "type": "json_object" })),
+        None,
+    ];
+
+    let client = reqwest::Client::new();
+    // Qwen-style thinking models burn most of their tokens on reasoning, and
+    // the JSON is all we need. Only local servers get the extra field (the
+    // hosted OpenAI API rejects unknown request fields); drop it again if the
+    // server turns out not to accept it.
+    let mut extras = is_local_endpoint(&base_url);
+    let mut last_err = String::from("AI 未返回有效 JSON 对象");
+
+    for format in formats.iter() {
+        let mut body = json!({
+            "model": model,
+            "messages": [
+                { "role": "system", "content": WORD_GEN_PROMPT },
+                { "role": "user", "content": word },
+            ],
+            "stream": false,
+            "temperature": 0.1,
+        });
+        if let Some(f) = format {
+            body["response_format"] = f.clone();
+        }
+        if extras {
+            body["chat_template_kwargs"] = json!({ "enable_thinking": false });
+        }
+
+        let res = match auth(client.post(&url).json(&body), &api_key).send().await {
+            Ok(r) => r,
+            Err(e) => return Err(format!("请求失败: {e}")),
+        };
+        let status = res.status();
+        let text = res.text().await.unwrap_or_default();
+
+        if !status.is_success() {
+            extras = false;
+            last_err = format!("请求失败 ({}): {}", status.as_u16(), shorten(&text, 300));
+            continue;
+        }
+
+        let data: Value = match serde_json::from_str(&text) {
+            Ok(v) => v,
+            Err(e) => {
+                last_err = format!("响应解析失败: {e}: {}", shorten(&text, 200));
+                continue;
+            }
+        };
+        let mut content = data
+            .pointer("/choices/0/message/content")
+            .and_then(|c| c.as_str())
+            .unwrap_or("")
+            .to_string();
+        if content.trim().is_empty() {
+            // Thinking models sometimes leave content empty and put everything
+            // into reasoning_content; try that before giving up.
+            content = data
+                .pointer("/choices/0/message/reasoning_content")
+                .and_then(|c| c.as_str())
+                .unwrap_or("")
+                .to_string();
+        }
+        if content.trim().is_empty() {
+            last_err = "AI 返回为空".into();
+            continue;
+        }
+
+        match extract_json_object(&content) {
+            Ok(parsed) => return word_definition_from_json(&parsed, &word),
+            Err(e) => last_err = e,
+        }
+    }
+
+    Err(last_err)
 }

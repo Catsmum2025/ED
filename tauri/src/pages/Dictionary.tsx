@@ -525,11 +525,25 @@ export function DictionaryPage() {
           {selected.definitions.map((def, i) => (
             <Card key={i} style={{ ['--i' as string]: i }} className="animate-list-item">
               <CardContent>
-                <span className="inline-block px-2.5 py-0.5 rounded-md bg-accent-tint text-accent text-xs font-semibold uppercase tracking-wide mb-2.5">
-                  {def.pos}
-                </span>
-                <p className="whitespace-pre-line text-slate-800 dark:text-slate-200 leading-relaxed">{def.explanation_en}</p>
-                <p className="mt-1 whitespace-pre-line text-slate-500 dark:text-slate-400 text-sm">{def.explanation_cn}</p>
+                {def.pos && (
+                  <span className="inline-block px-2.5 py-0.5 rounded-md bg-accent-tint text-accent text-xs font-semibold uppercase tracking-wide mb-2.5">
+                    {def.pos}
+                  </span>
+                )}
+                {def.explanation_en && (
+                  <p className="whitespace-pre-line text-slate-800 dark:text-slate-200 leading-relaxed">{def.explanation_en}</p>
+                )}
+                {def.explanation_cn && (
+                  <p
+                    className={
+                      def.explanation_en
+                        ? 'mt-1 whitespace-pre-line text-slate-500 dark:text-slate-400 text-sm'
+                        : 'whitespace-pre-line text-slate-800 dark:text-slate-200 leading-relaxed'
+                    }
+                  >
+                    {def.explanation_cn}
+                  </p>
+                )}
                 {def.example_en && (
                   <div className="mt-4 rounded-xl bg-slate-50 dark:bg-slate-800/40 border-l-2 border-accent/40 pl-4 pr-3 py-2.5">
                     <div className="flex items-start justify-between gap-2">
