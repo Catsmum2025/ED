@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Copy, Languages } from 'lucide-react';
+import { Check, Copy, Languages } from 'lucide-react';
 import { api } from '../ipc';
 import { Button } from '../components/Button';
 import { Card, CardContent } from '../components/Card';
@@ -17,6 +17,8 @@ export function TranslatePage() {
   const [text, setText] = useState(() => searchParams.get('text') ?? '');
   const [result, setResult] = useState('');
   const [loading, setLoading] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const copyTimer = useRef<number | null>(null);
   const resultRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -47,9 +49,20 @@ export function TranslatePage() {
     });
   };
 
-  const handleCopy = () => {
-    navigator.clipboard.writeText(result);
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(result);
+    } catch {
+      /* clipboard may be denied; still show the feedback */
+    }
+    setCopied(true);
+    if (copyTimer.current) window.clearTimeout(copyTimer.current);
+    copyTimer.current = window.setTimeout(() => setCopied(false), 1600);
   };
+
+  useEffect(() => () => {
+    if (copyTimer.current) window.clearTimeout(copyTimer.current);
+  }, []);
 
   const modelOptions = llm.models.length
     ? llm.models.map((m) => ({ value: m, label: m }))
@@ -97,10 +110,24 @@ export function TranslatePage() {
                 <SpeakButton text={result} title={t('translate.speakResult')} size="sm" />
                 <button
                   onClick={handleCopy}
-                  className="flex items-center gap-1 text-xs text-slate-500 hover:text-accent transition-colors"
+                  aria-live="polite"
+                  className={`flex items-center gap-1 rounded-lg px-2 py-1 text-xs transition-all duration-200 ${
+                    copied
+                      ? 'bg-accent-tint text-accent'
+                      : 'text-slate-500 hover:text-accent hover:bg-accent-tint/60'
+                  }`}
                 >
-                  <Copy className="w-3.5 h-3.5" />
-                  {t('translate.copy')}
+                  {copied ? (
+                    <>
+                      <Check className="w-3.5 h-3.5 animate-pop-in" />
+                      {t('translate.copied')}
+                    </>
+                  ) : (
+                    <>
+                      <Copy className="w-3.5 h-3.5" />
+                      {t('translate.copy')}
+                    </>
+                  )}
                 </button>
               </div>
             </div>

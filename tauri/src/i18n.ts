@@ -86,7 +86,7 @@ const messages: Record<Locale, Record<string, string>> = {
     'settings.dict.confirmInstall': '将解压内置词库到应用数据目录并建立索引（旧词库约 38 MB；ECDICT 词库约 243 MB / 77 万词条，需要数分钟），完成后自动设为当前词典目录。是否继续？',
     'settings.dict.indexing': '正在后台建立索引，完成后自动刷新…',
     'settings.dict.importZip': '导入词库压缩包',
-    'settings.dict.confirmImport': '将从压缩包「{path}」导入词库并重建索引（ECDICT 约 243 MB / 77 万词条，可能需要数分钟），完成后会替换当前词典目录。是否继续？',
+    'settings.dict.confirmImport': '将从压缩包「{path}」导入词库并重建索引（支持 zip 与 .jsonl.gz；ECDICT 约 77 万词条，可能需要数分钟），完成后会替换当前词典目录。是否继续？',
     'settings.dict.confirmUninstall': '将删除已解压的词库文件并清除词典路径设置。此操作不可恢复，确定继续吗？',
     'settings.dict.extractionFailed': '解压失败',
     'settings.dict.uninstallFailed': '卸载失败',
@@ -244,6 +244,7 @@ const messages: Record<Locale, Record<string, string>> = {
     'translate.resultLabel': '翻译结果',
     'translate.speakResult': '朗读译文',
     'translate.copy': '复制',
+    'translate.copied': '已复制',
 
     // Stats page
     'stats.title': '统计',
@@ -448,7 +449,7 @@ const messages: Record<Locale, Record<string, string>> = {
     'settings.dict.confirmInstall': 'This extracts the bundled dictionary to the app data directory and builds the index (about 38 MB for the legacy library, or ~243 MB / 770k entries for ECDICT, which takes a few minutes). It then becomes the current dictionary path. Continue?',
     'settings.dict.indexing': 'Building the index in the background. The page refreshes when it finishes.',
     'settings.dict.importZip': 'Import Dictionary Zip',
-    'settings.dict.confirmImport': 'Import the dictionary from "{path}" and rebuild the index (ECDICT is about 243 MB / 770k entries and may take several minutes). This replaces the current dictionary directory. Continue?',
+    'settings.dict.confirmImport': 'Import the dictionary from "{path}" and rebuild the index (zip or .jsonl.gz; ECDICT is about 770k entries and may take several minutes). This replaces the current dictionary directory. Continue?',
     'settings.dict.confirmUninstall': 'This will delete the extracted dictionary files and clear the dictionary path setting. This cannot be undone. Continue?',
     'settings.dict.extractionFailed': 'Extraction failed',
     'settings.dict.uninstallFailed': 'Uninstall failed',
@@ -606,6 +607,7 @@ const messages: Record<Locale, Record<string, string>> = {
     'translate.resultLabel': 'Translation',
     'translate.speakResult': 'Speak translation',
     'translate.copy': 'Copy',
+    'translate.copied': 'Copied',
 
     // Stats page
     'stats.title': 'Stats',
