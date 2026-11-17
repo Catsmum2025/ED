@@ -16,7 +16,7 @@
 
 词条数据来自上游项目 [ahpxex/open-dictionary](https://github.com/ahpxex/open-dictionary) —— 一部以 Wiktionary/Wiktextract 快照为基础、再用大模型补写学习者向解释的开源英汉词典，当前收录 84,212 个词条。
 
-ED 只是它的一个消费者：随安装包分发的是上游词库的一份 JSON 导出快照（`src-tauri/resources/dictionary.zip`，约 3.8 万文件），在“设置 → 词典 → 解压词库”时安装到本地使用。词库的构建管线、选词规则和释义质量由上游负责，相关问题请到[上游仓库](https://github.com/ahpxex/open-dictionary)反馈。
+ED 只是它的一个消费者：随安装包分发的是上游词库的一份 JSON 导出快照（`src-tauri/resources/dictionary.zip`，约 2.5 万文件 / 41 MB，含 AI 补写的释义、例句与近义辨析），在“设置 → 词典 → 解压词库”时安装到本地使用。词库的构建管线、选词规则和释义质量由上游负责，相关问题请到[上游仓库](https://github.com/ahpxex/open-dictionary)反馈。
 
 ### 许可
 | 内容 | 许可 |
