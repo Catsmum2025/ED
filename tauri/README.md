@@ -9,6 +9,21 @@ Electron 版（见 ../electron/app）的 Tauri v2 重构移植，UI 与功能尽
 - 图标：pnpm icon（源图 app-icon.png，tauri icon 生成 src-tauri/icons/*）
 - 无头自检：设置环境变量 CDICTIONARY_SELFTEST=install 后运行 exe，会自动执行完整“解压词库”管线（找内置 zip → 解压 → flatten → 写 settings → 重建索引）并打印结果后退出，用于打包产物验证
 
+## 大词库支持（ECDICT dict_json，77 万词条）
+- 两种词库数据都支持：旧版每词一个富化 JSON（约 2.5 万条）与 ECDICT dict_json（770,109 个 JSON，约 294 MB；字段 word / phonetic / translation / definition / tags / exchange，约 3.5% 带富化 definitions）
+- 读取时自动归一化：phonetic→音标、translation 首行→简洁释义、空 definitions 按换行拆成释义卡、exchange（s: / p: / d: / i: / 3: / r: / t:）→ 词形标签
+- 索引从 index.json 改为紧凑二进制 **index.bin**：770k 条约 90 MB，启动加载约 0.2 s；搜索并行扫描，中文按“词头 POS + 释义边界 + 常用标签（zk/gk/cet4…）”排序，例句不参与中文检索（避免“量子纠缠”被姓名的例句命中）
+- 导入方式：
+  1. 设置 → 词典 → “导入词库压缩包”，选择 dict_json.zip（解压的同时解析并建立索引，只需一趟）
+  2. 或把 dictionaryPath 直接指向已解压目录（首次在后台建索引，约 4 分钟，期间搜索显示构建提示）
+- 解压/建索引全程有进度；大词库导入与卸载需要数分钟，UI 不阻塞。示例：
+  ```powershell
+  $env:EDICT_TEST_DICT = "D:\ecdict\dict_json\dict_json"
+  cd tauri/src-tauri
+  cargo test --bins build_full_ecdict_index_when_available -- --ignored --nocapture
+  # 小样本先验证：EDICT_TEST_DICT 指向 ~1000 个 JSON 的目录，EDICT_TEST_MIN=1000
+  ```
+
 ## 移植要点（与 Electron 版的对应关系）
 - electron/main.ts + services/*.ts → src-tauri/src/*.rs（Rust 重写：词典索引/搜索、词书、统计、LLM 流式翻译、IndexTTS 缓存、本地模型进程管理、词库 zip 安装器）
 - preload.ts contextBridge → src/ipc.ts 适配层：用 @tauri-apps/api invoke/event 实现了与 window.electronAPI 完全同构的 api 对象，页面代码零改动复用

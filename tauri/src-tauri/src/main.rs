@@ -147,6 +147,7 @@ fn main() {
             dictionary::dict_random_word,
             installer::dict_can_install,
             installer::dict_install,
+            installer::dict_import_zip,
             installer::dict_uninstall,
             stats::stats_record,
             stats::stats_overview,

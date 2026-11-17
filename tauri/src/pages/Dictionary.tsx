@@ -20,6 +20,7 @@ export function DictionaryPage() {
   const [activeIndex, setActiveIndex] = useState(-1);
   const [notFoundWord, setNotFoundWord] = useState<string | null>(null);
   const [zhNoResult, setZhNoResult] = useState<string | null>(null);
+  const [indexing, setIndexing] = useState(false);
   const [generating, setGenerating] = useState(false);
   const [genError, setGenError] = useState<string | null>(null);
   const [randomWord, setRandomWord] = useState<WordDefinition | null>(null);
@@ -122,10 +123,30 @@ export function DictionaryPage() {
     setLang(/[\u4e00-\u9fa5]/.test(query) ? 'zh' : 'en');
   }, [query]);
 
+  // A large dictionary (ECDICT: 770k entries) builds its index in the
+  // background; tell the user instead of silently returning no results.
+  useEffect(() => {
+    let alive = true;
+    const tick = async () => {
+      try {
+        const status = await api.dict.indexStatus();
+        if (alive) setIndexing(!!status.indexing);
+      } catch {
+        /* not ready yet */
+      }
+    };
+    tick();
+    const timer = window.setInterval(tick, 3000);
+    return () => {
+      alive = false;
+      window.clearInterval(timer);
+    };
+  }, []);
+
   useEffect(() => {
     const timer = setTimeout(async () => {
       setZhNoResult(null);
-      if (!query.trim()) {
+      if (!query.trim() || indexing) {
         setCandidates([]);
         return;
       }
@@ -134,7 +155,7 @@ export function DictionaryPage() {
       setActiveIndex(-1);
     }, 150);
     return () => clearTimeout(timer);
-  }, [query, lang]);
+  }, [query, lang, indexing]);
 
   const handleSearch = async (word?: string) => {
     const target = (word || query).trim();
@@ -242,6 +263,13 @@ export function DictionaryPage() {
           </div>
         )}
       </div>
+
+      {indexing && (
+        <div className="mx-auto flex max-w-2xl items-center gap-2 rounded-xl bg-accent-tint px-3.5 py-2 text-xs text-accent">
+          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+          {t('dict.indexingHint')}
+        </div>
+      )}
 
       {!selected && !notFoundWord && zhNoResult && candidates.length === 0 && (
         <div className="max-w-2xl mx-auto animate-fade-in">
@@ -466,9 +494,21 @@ export function DictionaryPage() {
                 </div>
               </div>
               {selected.concise_definition && (
-                <p className="mt-3 inline-block px-3.5 py-1.5 rounded-lg bg-accent-tint text-accent font-medium">
+                <p className="mt-3 inline-block whitespace-pre-line px-3.5 py-1.5 rounded-lg bg-accent-tint text-accent font-medium">
                   {selected.concise_definition}
                 </p>
+              )}
+              {selected.tags && selected.tags.length > 0 && (
+                <div className="mt-3 flex flex-wrap gap-1.5">
+                  {selected.tags.map((tag) => (
+                    <span
+                      key={tag}
+                      className="rounded-lg bg-slate-100 px-2 py-0.5 text-[11px] font-medium uppercase tracking-wide text-slate-500 dark:bg-slate-800 dark:text-slate-400"
+                    >
+                      {tag}
+                    </span>
+                  ))}
+                </div>
               )}
               {selected.forms && Object.keys(selected.forms).length > 0 && (
                 <div className="mt-4 flex flex-wrap gap-2">
@@ -488,8 +528,8 @@ export function DictionaryPage() {
                 <span className="inline-block px-2.5 py-0.5 rounded-md bg-accent-tint text-accent text-xs font-semibold uppercase tracking-wide mb-2.5">
                   {def.pos}
                 </span>
-                <p className="text-slate-800 dark:text-slate-200 leading-relaxed">{def.explanation_en}</p>
-                <p className="mt-1 text-slate-500 dark:text-slate-400 text-sm">{def.explanation_cn}</p>
+                <p className="whitespace-pre-line text-slate-800 dark:text-slate-200 leading-relaxed">{def.explanation_en}</p>
+                <p className="mt-1 whitespace-pre-line text-slate-500 dark:text-slate-400 text-sm">{def.explanation_cn}</p>
                 {def.example_en && (
                   <div className="mt-4 rounded-xl bg-slate-50 dark:bg-slate-800/40 border-l-2 border-accent/40 pl-4 pr-3 py-2.5">
                     <div className="flex items-start justify-between gap-2">

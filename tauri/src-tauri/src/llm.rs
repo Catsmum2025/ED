@@ -337,5 +337,6 @@ pub async fn dict_generate_word(app_state: State<'_, AppState>, word: String) ->
         forms,
         definitions,
         comparison,
+        ..Default::default()
     })
 }

@@ -48,7 +48,7 @@ pub fn settings_file() -> PathBuf {
     data_dir().join("settings.json")
 }
 pub fn index_file() -> PathBuf {
-    data_dir().join("index.json")
+    data_dir().join("index.bin")
 }
 pub fn stats_file() -> PathBuf {
     data_dir().join("stats.json")

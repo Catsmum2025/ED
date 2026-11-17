@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { FolderOpen, CheckCircle, PackageOpen, Trash2, Eye } from 'lucide-react';
+import { FolderOpen, CheckCircle, PackageOpen, Trash2, Eye, Loader2, FileArchive } from 'lucide-react';
 import { useT } from '../i18n';
 import { useSettingsStore } from '../store/settings';
 import { useExtractionStore } from '../store/extraction';
@@ -13,8 +13,9 @@ import { WordManager } from './WordManager';
 export function DictionaryCacheSettings() {
   const t = useT();
   const { dictionaryPath, update } = useSettingsStore();
-  const [status, setStatus] = useState({ exists: false, count: 0, lastUpdated: 0 });
+  const [status, setStatus] = useState({ exists: false, count: 0, lastUpdated: 0, indexing: false });
   const [canInstall, setCanInstall] = useState(false);
+  const indexing = status.indexing;
   const [busy, setBusy] = useState<null | 'uninstall'>(null);
   const [message, setMessage] = useState<{ text: string; kind: 'ok' | 'err' } | null>(null);
 
@@ -52,6 +53,14 @@ export function DictionaryCacheSettings() {
     loadStatus();
   }, [dictionaryPath]);
 
+  // Large dictionaries (ECDICT: 770k entries) spend minutes building the index
+  // in the background; keep the status fresh until it finishes.
+  useEffect(() => {
+    if (!indexing) return;
+    const timer = window.setInterval(() => { void loadStatus(); }, 2000);
+    return () => window.clearInterval(timer);
+  }, [indexing]);
+
   const handlePick = async () => {
     const dir = await api.settings.pickDictionaryDir();
     if (dir) {
@@ -72,6 +81,24 @@ export function DictionaryCacheSettings() {
     try {
       await api.dict.install();
     } catch (err: any) {
+      setMessage({ text: err?.message || t('settings.dict.extractionFailed'), kind: 'err' });
+    }
+  };
+
+  const handleImportZip = async () => {
+    const zipPath = await api.settings.pickZipFile();
+    if (!zipPath) return;
+    if (!confirm(t('settings.dict.confirmImport', { path: zipPath }))) return;
+    setMessage(null);
+    setRunning();
+    try {
+      const res = await api.dict.importZip(zipPath);
+      if (!res.started) {
+        useExtractionStore.getState().reset();
+        setMessage({ text: res.message || t('settings.dict.extractionFailed'), kind: 'err' });
+      }
+    } catch (err: any) {
+      useExtractionStore.getState().reset();
       setMessage({ text: err?.message || t('settings.dict.extractionFailed'), kind: 'err' });
     }
   };
@@ -114,6 +141,12 @@ export function DictionaryCacheSettings() {
           <p className="text-xs text-slate-500 dark:text-slate-400">
             {`${t('settings.dict.entryCount')}:`} {status.count} · {`${t('settings.dict.lastUpdated')}:`} {status.lastUpdated ? new Date(status.lastUpdated).toLocaleString('zh-CN') : t('settings.dict.notIndexed')}
           </p>
+          {indexing && (
+            <p className="flex items-center gap-1.5 rounded-lg bg-accent-tint px-3 py-2 text-xs text-accent">
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              {t('settings.dict.indexing')}
+            </p>
+          )}
 
           {message && (
             <p className={`text-xs px-3 py-2 rounded-lg ${
@@ -126,19 +159,23 @@ export function DictionaryCacheSettings() {
           )}
 
           <div className="flex flex-wrap gap-3">
-            <Button onClick={handleInstall} disabled={!canInstall || blocked || busy !== null}>
+            <Button onClick={handleInstall} disabled={!canInstall || blocked || busy !== null || indexing}>
               <PackageOpen className="w-4 h-4 mr-2" />
               {t('settings.dict.extractDict')}
             </Button>
-            <Button onClick={handleUninstall} disabled={blocked || busy !== null}>
+            <Button onClick={handleUninstall} disabled={blocked || busy !== null || indexing}>
               <Trash2 className={`w-4 h-4 mr-2 ${busy === 'uninstall' ? 'animate-pulse' : ''}`} />
               {busy === 'uninstall' ? t('settings.dict.uninstalling') : t('settings.dict.uninstallDict')}
+            </Button>
+            <Button variant="secondary" onClick={handleImportZip} disabled={blocked || busy !== null || indexing}>
+              <FileArchive className="w-4 h-4 mr-2" />
+              {t('settings.dict.importZip')}
             </Button>
             <Button variant="secondary" onClick={handleOpen} disabled={!dictionaryPath || blocked}>
               <FolderOpen className="w-4 h-4 mr-2" />
               {t('settings.dict.showInExplorer')}
             </Button>
-            <Button variant="secondary" onClick={handlePick} disabled={blocked}>
+            <Button variant="secondary" onClick={handlePick} disabled={blocked || indexing}>
               <CheckCircle className="w-4 h-4 mr-2" />
               {t('settings.dict.pickDir')}
             </Button>

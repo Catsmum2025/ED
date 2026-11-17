@@ -23,6 +23,7 @@ futures-util = "0.3"
 zip = { version = "2", default-features = false, features = ["deflate"] }
 sha1 = "0.10"
 rand = "0.8"
+rayon = "1.10"
 chrono = "0.4"
 uuid = { version = "1", features = ["v4"] }
 image = { version = "0.25", default-features = false, features = ["png"] }
