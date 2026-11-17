@@ -51,3 +51,11 @@ cd src-tauri && cargo test --bins    # 单元测试
 ## 相关文档
 - [tauri/README.md](tauri/README.md) —— 主 README（构建、许可、致谢、移植要点）
 - [AGENTS.md](AGENTS.md) —— 开发工作备忘（构建/验证正确姿势、踩坑记录、历史决策）
+
+## 致谢
+- 开源项目ahpxex/actionary（主要为其先前版本actionary-re）为本项目的原型CDictionary提供了大量想法和参考，万分感谢
+
+## 提醒
+- 本项目主要由DeepseekHarness搭配本地Qwen3.8-flash-next与Deepseek-v4.1-flash API协同开发
+- 其中可能会有部分功能不完整，体验不佳，之后有机会会持续更新
+- 该项目主要功能均无需网络连接
