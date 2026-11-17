@@ -15,6 +15,10 @@ dictionary/
 # the original Electron app stays local-only (removed from git history 2026-11-17)
 electron/
 
+# local scratch data used by the maintainer (word lists, merge reports)
+_work/
+merged_dict_json/
+
 # misc
 .DS_Store
 *.log

@@ -1365,14 +1365,18 @@ mod tests {
         let _ = fs::remove_dir_all(&dir);
     }
 
-    /// Opt-in full build: EDICT_TEST_DICT must point at a directory (defaults to
-    /// D:/ecdict/dict_json/dict_json when present). Excluded from normal runs.
+    /// Opt-in full build: point EDICT_TEST_DICT at an extracted dict_json
+    /// directory. Ignored by default; nothing machine-specific is baked in.
     #[test]
     #[ignore]
     fn build_full_ecdict_index_when_available() {
-        let dir = std::env::var("EDICT_TEST_DICT")
-            .unwrap_or_else(|_| "D:/ecdict/dict_json/dict_json".to_string());
-        if !Path::new(&dir).is_dir() { return; }
+        let dir = match std::env::var("EDICT_TEST_DICT") {
+            Ok(d) if Path::new(&d).is_dir() => d,
+            _ => {
+                println!("EDICT_TEST_DICT is not set to an existing directory; skipping");
+                return;
+            }
+        };
         let started = std::time::Instant::now();
         let idx = build_index(&dir, Some(&|n| {
             if n % 50_000 == 0 { println!("indexed {n}"); }

@@ -50,6 +50,15 @@ cd src-tauri && cargo test --bins    # 单元测试
 
 > ECDICT（[skywind3000/ECDICT](https://github.com/skywind3000/ECDICT)）为可选外部词库：需自行下载 `dict_json` 后在应用内“导入词库压缩包”或指定目录，本仓库不随包分发其数据；其数据许可与署名要求以上游说明为准。
 
+## 提醒
+- 本项目主要由 DeepSeek Harness 搭配本地 Qwen3.8-flash-next 与 DeepSeek-v4.1-flash API 协同开发。
+- 其中可能会有部分功能不完整、体验不佳，之后有机会会持续更新。
+- 该项目主要功能均无需网络连接。
+
+## 致谢
+- 开源项目 [ahpxex/actionary](https://github.com/ahpxex/actionary)（主要为其先前版本 actionary-re）为本项目的原型 CDictionary 提供了大量想法和参考，万分感谢。
+- 感谢词库上游 [ahpxex/open-dictionary](https://github.com/ahpxex/open-dictionary)、Wiktionary / Wiktextract 社区与 wordfreq 作者 Robyn Speer。
+
 ## 相关文档
 - [tauri/README.md](tauri/README.md) —— 主 README（构建、许可、致谢、移植要点）
 - [AGENTS.md](AGENTS.md) —— 开发工作备忘（构建/验证正确姿势、踩坑记录、历史决策）

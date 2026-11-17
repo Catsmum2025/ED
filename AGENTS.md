@@ -4,7 +4,7 @@
 
 ## 1. 当前状态快照（2026-11-17）
 - **项目已更名为 ED**（原 CDictionary）：包名 `ed`、identifier `com.ahpx.ed`、窗口/托盘标题 `ED`、产物 `ED_0.1.0_x64-setup.exe` / `ED-0.1.0-Portable.zip`、自检环境变量 `ED_SELFTEST=install`、中文反查测试字典变量 `ED_TEST_DICT`。运行时数据目录随之变为 `%APPDATA%/com.ahpx.ed/`（旧 com.ahpx.cdictionary 数据不会自动迁移，首次使用重新“解压词库”即可）
-- **git**：仓库根 = `D:/trae/CDictionary`；`main` 为稳定线，2026-11-16 的 UI 重构在分支 `feat/vertical-rail-nav`（b88b5c2 / a8a41a0 / 47895f9），合并前以该分支为准
+- **git**：仓库根 = 本仓库；`main` 为稳定线，2026-11-16 的 UI 重构在分支 `feat/vertical-rail-nav`（b88b5c2 / a8a41a0 / 47895f9），合并前以该分支为准
 - **产物**（本地路径，未入库）：
   - NSIS：`tauri/src-tauri/target/release/bundle/nsis/ED_0.1.0_x64-setup.exe`（约 48.9 MB）
   - Portable：`tauri/release/ED-0.1.0-Portable.zip`（由 make-portable.ps1 生成，exe 名 ED.exe）
@@ -39,7 +39,7 @@
 # 1) 先杀掉所有实例，否则链接/打包报 os error 5（拒绝访问）
 Get-Process ed, cdictionary -ErrorAction SilentlyContinue | ForEach-Object { taskkill /pid $_.Id /T /F }
 # 2) 固定用 tauri CLI（会先跑 pnpm build 再 cargo release + NSIS），约 6-8 分钟
-Set-Location D:/trae/CDictionary/tauri; pnpm exec tauri build
+Set-Location <仓库根>/tauri; pnpm exec tauri build
 # 3) portable zip（Tauri 2.x 无内置 portable bundle 目标，脚本手动组装）
 powershell -ExecutionPolicy Bypass -File .\make-portable.ps1
 ```
@@ -82,9 +82,9 @@ powershell -ExecutionPolicy Bypass -File .\make-portable.ps1
 - **动效三档**：settings.motion（lively/calm/performance）→ SettingsLoader 写到 `<html data-motion>` → index.css 的 --dur/--ease/--page-shift 等令牌驱动全部动画；performance 档全局 1ms 并去掉导航毛玻璃
 - **中文反查**：dictionary.rs 的 `normalize_chinese_query`（剥离“怎么说/的英文/是什么意思”等问法）+ `score_chinese`（concise 加权、短语 > 起始 > 包含 > 相邻 bigram ≥50% > 字符覆盖 ≥60%，长度惩罚）；前端回车直接取排名第一的候选
 
-- **ECDICT 大词库适配（已并入 main）**：支持 dict_json 单词语义（phonetic/translation/definition/tags/exchange）；isnormal=0 的词条只有 translation/definition，读取时由 normalize_entry 拆成释义卡，因此照样能查、能看基础释义；isnormal=1 的词条在索引里置 `NORMAL_BIT`（1<<16，与标签位共存），"每日随机"只从这些词条抽（一次文件读取，不再连续试探 24 次）；索引改为二进制 index.bin（紧凑 blob + 记录表，770k 约 115 MB，加载 ~0.2 s；INDEX_VERSION=5，旧索引自动重建）；索引构建用 rayon 分批并行（770k 本机约 4 分钟）；中文排序 = 词头 POS 40 + 首义边界 120 + 常用标签（zk/gk +60、cet4/cet6 +20、ky/toefl/ielts/gre +10、任意 +30），例句不入索引；导入 zip 时解压与解析同趟完成（extract_and_build），设置页支持“导入词库压缩包”；建索引期间 INDEXING 置位，dict_* 命令快速返回空而不是阻塞；路径变更后后台重建
+- **ECDICT 大词库适配（已并入 main）**：支持 dict_json 单词语义（phonetic/translation/definition/tags/exchange）；isnormal=0 的词条只有 translation/definition，读取时由 normalize_entry 拆成释义卡，因此照样能查、能看基础释义；isnormal=1 的词条在索引里置 `NORMAL_BIT`（1<<16，与标签位共存），"每日随机"只从这些词条抽（一次文件读取，不再连续试探 24 次）；索引改为二进制 index.bin（紧凑 blob + 记录表，770k 约 115 MB，加载 ~0.2 s；INDEX_VERSION=5，旧索引自动重建）；索引构建用 rayon 分批并行（770k 冷盘约数分钟、热缓存约十余秒）；中文排序 = 词头 POS 40 + 首义边界 120 + 常用标签（zk/gk +60、cet4/cet6 +20、ky/toefl/ielts/gre +10、任意 +30），例句不入索引；导入 zip 时解压与解析同趟完成（extract_and_build），设置页支持“导入词库压缩包”；建索引期间 INDEXING 置位，dict_* 命令快速返回空而不是阻塞；路径变更后后台重建
 - **AI 生成词条**：word_gen_prompt.md 面向本地 OpenAI 兼容模型重写（输出契约、字段约束、释义/例句/辨析要求）；llm.rs 依次尝试 response_format=json_schema → json_object → 不传，本地端点（127.0.0.1/localhost）额外带 chat_template_kwargs.enable_thinking=false，服务端拒绝时自动去掉。实测 Unsloth Studio (127.0.0.1:8888, Qwen3.8-Flash-Next) 约 45 s 返回合法 JSON
-- **ECDICT 回归**：`$env:EDICT_TEST_DICT='D:\ecdict\dict_json\dict_json'; cargo test --bins build_full_ecdict_index_when_available -- --ignored --nocapture`（约 4 分钟）；小样本可设 EDICT_TEST_MIN 并把变量指向 ~1000 个 JSON 的目录
+- **ECDICT 回归**：`$env:EDICT_TEST_DICT='<解压后的 dict_json 目录>'; cargo test --bins build_full_ecdict_index_when_available -- --ignored --nocapture`（大词库约数分钟，取决于磁盘缓存）；小样本可设 EDICT_TEST_MIN 并把变量指向 ~1000 个 JSON 的目录
 
 ## 7. 历史工作时间线
 1. **迁移**：原 Electron 项目整体移入 `electron/app/`；根目录建 git 仓库
