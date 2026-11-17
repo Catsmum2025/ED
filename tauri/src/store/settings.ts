@@ -8,6 +8,12 @@ interface SettingsState extends AppSettings {
   update: (patch: Partial<AppSettings>) => Promise<void>;
 }
 
+/** Monotonic token for in-flight saves. Two fast keystrokes issue two
+ *  settings_set calls; the backend may finish them out of order, and applying
+ *  the older reply would revert the input value and bounce the caret to the
+ *  end. Only the newest reply is ever applied. */
+let saveSeq = 0;
+
 export const useSettingsStore = create<SettingsState>((set) => ({
   ...DEFAULT_SETTINGS,
   loaded: false,
@@ -16,7 +22,11 @@ export const useSettingsStore = create<SettingsState>((set) => ({
     set({ ...settings, loaded: true });
   },
   update: async (patch) => {
+    const mine = ++saveSeq;
+    // Optimistic merge first: the UI (and any input the user is typing in)
+    // never waits for the round trip, and stale replies are ignored below.
+    set((state) => ({ ...state, ...patch }));
     const updated = await api.settings.set(patch);
-    set({ ...updated });
+    if (mine === saveSeq) set({ ...updated });
   },
 }));

@@ -6,10 +6,10 @@
 - **项目已更名为 ED**（原 CDictionary）：包名 `ed`、identifier `com.ahpx.ed`、窗口/托盘标题 `ED`、产物 `ED_0.1.0_x64-setup.exe` / `ED-0.1.0-Portable.zip`、自检环境变量 `ED_SELFTEST=install`、中文反查测试字典变量 `ED_TEST_DICT`。运行时数据目录随之变为 `%APPDATA%/com.ahpx.ed/`（旧 com.ahpx.cdictionary 数据不会自动迁移，首次使用重新“解压词库”即可）
 - **git**：仓库根 = 本仓库；`main` 为稳定线，2026-11-16 的 UI 重构在分支 `feat/vertical-rail-nav`（b88b5c2 / a8a41a0 / 47895f9），合并前以该分支为准
 - **产物**（本地路径，未入库）：
-  - NSIS：`tauri/src-tauri/target/release/bundle/nsis/ED_0.1.0_x64-setup.exe`（约 48.9 MB）
-  - Portable：`tauri/release/ED-0.1.0-Portable.zip`（由 make-portable.ps1 生成，exe 名 ED.exe）
-  - 均为 2026-11-17 的更名后首版构建；`ED_SELFTEST=install` 冒烟通过（新数据目录 com.ahpx.ed：词库 25321 文件、index 14.7MB、settings 持久化正确）
-- **运行时数据**：`%APPDATA%/com.ahpx.ed/`（settings.json、index.json、stats.json、wordbooks.json、tts-cache/、dictionary/）；旧目录 com.ahpx.cdictionary 为历史遗留可自行删除
+  - NSIS：`tauri/src-tauri/target/release/bundle/nsis/ED_0.1.0_x64-setup.exe`（约 54.2 MiB）
+  - Portable：`tauri/release/ED-0.1.0-Portable.zip`（约 60 MB，由 make-portable.ps1 生成，exe 名 ED.exe）
+  - 2026-11-17 18:20 重建：内置词库换成合并版（25,179 个 JSON / 41 MB zip，含 AI 补写的释义、例句、近义辨析）；`ED_SELFTEST=install` 冒烟通过（解压 25,179 文件、索引 10.6 MB / 24,874 去重词条、搜索可用）
+- **运行时数据**：`%APPDATA%/com.ahpx.ed/`（settings.json、index.bin、stats.json、wordbooks.json、tts-cache/、dictionary/）；旧目录 com.ahpx.cdictionary 为历史遗留可自行删除
 
 ## 2. Git 约定
 - 提交身份：`git -c user.name=CDictionary -c user.email=dev@local commit ...`（本机无全局身份时用 -c 内联）
@@ -77,7 +77,8 @@ powershell -ExecutionPolicy Bypass -File .\make-portable.ps1
 - **窗口 label 约定**：`main` / `popup-dict` / `popup-translate`；弹窗失焦自动隐藏（main.rs 全局 on_window_event 按 label 前缀匹配）、主窗口 CloseRequested→hide（托盘退出经 QUITTING 原子标志放行）
 - **数据目录**：见 state.rs；resource_dir 里找 dictionary.zip/popup-icon.png（兼容 `<rd>/`、`<rd>/resources/` 两种布局）
 - **词库安装流**：installer.rs `extract_and_flatten`（zip crate，无 PowerShell 依赖，可单测）→ 写 settings.dictionaryPath → dict.update_path → rebuild（带进度回调）→ emit Done；前端 ExtractionWatcher 负责把新路径镜像进 store（勿删！曾有陈旧回写竞态导致功能回归，见 b590627）
-- **前端外壳**：`components/Nav.tsx` 左侧 fixed 竖向图标导航（全高圆角卡片、底部隔线放设置与 `/dashboard`）；`components/Layout.tsx` 用 `.app-main` 预留导航偏移并按 pathname 重放入场动画
+- **前端外壳**：`components/Nav.tsx` 左侧 fixed 竖向图标导航（全高圆角卡片、底部隔线放设置与 `/dashboard`）；`components/Layout.tsx` 用 `.app-main` 预留导航偏移，入场动画只按**一级路由**重放（/settings/* 切换只让右侧面板动，Settings.tsx 按 tab key 播动画）
+- **设置写盘竞态**：store/settings.ts 的 update 先乐观合并、再按自增序号只接受最新一次 settings_set 的返回；否则快速输入时后端回包乱序会把输入值回退、光标跳到末尾（LLM 的 URL / API Key 输入框曾因此“顽疾”）
 - **设计系统**：圆角统一为 4/8/12/16/full（tailwind.config.js 的 borderRadius + index.css 的 --radius 变量）；下拉统一用 `components/Select.tsx`（自定义 listbox，默认下滑展开、空间不足向上翻转、键盘/ARIA 完整），**禁止原生 select**
 - **动效三档**：settings.motion（lively/calm/performance）→ SettingsLoader 写到 `<html data-motion>` → index.css 的 --dur/--ease/--page-shift 等令牌驱动全部动画；performance 档全局 1ms 并去掉导航毛玻璃
 - **中文反查**：dictionary.rs 的 `normalize_chinese_query`（剥离“怎么说/的英文/是什么意思”等问法）+ `score_chinese`（concise 加权、短语 > 起始 > 包含 > 相邻 bigram ≥50% > 字符覆盖 ≥60%，长度惩罚）；前端回车直接取排名第一的候选
