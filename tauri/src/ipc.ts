@@ -58,6 +58,12 @@ const settingsApi = {
     dialogOpen({ directory: true, multiple: false, title: '选择词典目录' }).then(
       (v) => (typeof v === 'string' ? v : null),
     ),
+  pickZipFile: (): Promise<string | null> =>
+    dialogOpen({
+      multiple: false,
+      filters: [{ name: '词典压缩包', extensions: ['zip'] }],
+      title: '选择词库压缩包',
+    }).then((v) => (typeof v === 'string' ? v : null)),
   openUrl: async (url: string): Promise<void> => {
     await shellOpenUrl(url);
   },
@@ -75,12 +81,14 @@ const dictApi = {
     invoke<(WordDefinition | null)[]>('dict_get_words', { words }),
   rebuildIndex: (): Promise<{ success: boolean; count: number }> =>
     invoke<{ success: boolean; count: number }>('dict_rebuild_index'),
-  indexStatus: (): Promise<{ exists: boolean; count: number; lastUpdated: number }> =>
-    invoke<{ exists: boolean; count: number; lastUpdated: number }>('dict_index_status'),
+  indexStatus: (): Promise<{ exists: boolean; count: number; lastUpdated: number; indexing: boolean }> =>
+    invoke<{ exists: boolean; count: number; lastUpdated: number; indexing: boolean }>('dict_index_status'),
   canInstall: (): Promise<{ available: boolean; zipPath: string | null }> =>
     invoke<{ available: boolean; zipPath: string | null }>('dict_can_install'),
   install: (): Promise<{ started: boolean; message: string; path: string; count: number }> =>
     invoke<{ started: boolean; message: string; path: string; count: number }>('dict_install'),
+  importZip: (zipPath: string): Promise<{ started: boolean; message: string; path: string; count: number }> =>
+    invoke<{ started: boolean; message: string; path: string; count: number }>('dict_import_zip', { zipPath }),
   onInstallProgress: (cb: (p: { phase: 'extract' | 'move' | 'index'; count: number; total: number }) => void) =>
     subscribe('dict:installProgress', cb),
   onInstallDone: (cb: (r: { path: string; count: number }) => void) => subscribe('dict:installDone', cb),

@@ -82,6 +82,9 @@ powershell -ExecutionPolicy Bypass -File .\make-portable.ps1
 - **动效三档**：settings.motion（lively/calm/performance）→ SettingsLoader 写到 `<html data-motion>` → index.css 的 --dur/--ease/--page-shift 等令牌驱动全部动画；performance 档全局 1ms 并去掉导航毛玻璃
 - **中文反查**：dictionary.rs 的 `normalize_chinese_query`（剥离“怎么说/的英文/是什么意思”等问法）+ `score_chinese`（concise 加权、短语 > 起始 > 包含 > 相邻 bigram ≥50% > 字符覆盖 ≥60%，长度惩罚）；前端回车直接取排名第一的候选
 
+- **ECDICT 大词库适配（分支 feat/ecdict-770k）**：支持 dict_json 单词语义（phonetic/translation/definition/tags/exchange）；索引改为二进制 index.bin（紧凑 blob + 记录表，770k 约 90 MB，加载 ~0.2 s）；索引构建用 rayon 分批并行（770k 本机约 4 分钟）；中文排序 = 词头 POS 40 + 首义边界 120 + 常用标签（zk/gk +60、cet4/cet6 +20、ky/toefl/ielts/gre +10、任意 +30），例句不入索引；导入 zip 时解压与解析同趟完成（extract_and_build），设置页支持“导入词库压缩包”；建索引期间 INDEXING 置位，dict_* 命令快速返回空而不是阻塞；路径变更后后台重建
+- **ECDICT 回归**：`$env:EDICT_TEST_DICT='D:\ecdict\dict_json\dict_json'; cargo test --bins build_full_ecdict_index_when_available -- --ignored --nocapture`（约 4 分钟）；小样本可设 EDICT_TEST_MIN 并把变量指向 ~1000 个 JSON 的目录
+
 ## 7. 历史工作时间线
 1. **迁移**：原 Electron 项目整体移入 `electron/app/`；根目录建 git 仓库
 2. **移植**：前端整拷 + ipc.ts 适配层重写；Rust 端按 Electron services 逐模块重写（settings/dictionary/stats/wordbooks/llm/tts/localmodel/installer/windows）；用户提供的 app-icon.png 经 `pnpm exec tauri icon` 生成全套图标

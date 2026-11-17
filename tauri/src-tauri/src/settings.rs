@@ -196,7 +196,7 @@ pub fn save_settings(settings: &AppSettings) -> Result<(), String> {
     Err(last_err)
 }
 
-use tauri::{AppHandle, State};
+use tauri::{AppHandle, Manager, State};
 use tauri_plugin_autostart::ManagerExt;
 
 use crate::AppState;
@@ -229,10 +229,21 @@ pub fn settings_set(
         .map_err(|e| format!("无效的设置补丁: {e}"))?;
     save_settings(&merged)?;
 
-    // dictionaryPath changed -> re-point the dictionary service.
+    // dictionaryPath changed -> re-point the dictionary service and rebuild the
+    // index in the background. A 770k-entry ECDICT folder takes minutes; the
+    // settings command must return immediately and commands answer empty while
+    // indexing is in flight.
     if patch.get("dictionaryPath").is_some() && merged.dictionary_path != prev_dict_path {
-        let mut dict = app_state.dict.lock().unwrap();
-        dict.update_path(merged.dictionary_path.clone());
+        {
+            let mut dict = app_state.dict.lock().unwrap();
+            dict.update_path(merged.dictionary_path.clone());
+        }
+        let handle = app.clone();
+        std::thread::spawn(move || {
+            let st = handle.state::<AppState>();
+            let mut dict = st.dict.lock().unwrap();
+            dict.rebuild(None);
+        });
     }
 
     // Local model command/bat changed -> restart it when necessary.

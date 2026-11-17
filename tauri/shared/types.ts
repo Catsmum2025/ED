@@ -2,6 +2,13 @@ export interface WordDefinition {
   word: string;
   pronunciation: string;
   concise_definition: string;
+  /** ECDICT fields (present for dict_json sources). */
+  phonetic?: string;
+  translation?: string;
+  definition?: string;
+  tags?: string[];
+  exchange?: string;
+  isnormal?: number;
   forms?: Record<string, string>;
   definitions: Array<{
     pos: string;

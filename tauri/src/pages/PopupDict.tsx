@@ -130,7 +130,7 @@ export function PopupDictPage() {
             {selected.definitions[0] && (
               <div className="mt-1.5 space-y-1">
                 <span className="inline-block px-1.5 py-0.5 rounded bg-accent-tint text-accent text-[10px] font-semibold uppercase">{selected.definitions[0].pos}</span>
-                <p className="text-sm text-slate-700 dark:text-slate-300 leading-snug">{selected.definitions[0].explanation_cn || selected.definitions[0].explanation_en}</p>
+                <p className="whitespace-pre-line text-sm text-slate-700 dark:text-slate-300 leading-snug">{selected.definitions[0].explanation_cn || selected.definitions[0].explanation_en}</p>
                 {selected.definitions[0].example_en && (
                   <p className="text-xs text-slate-500 dark:text-slate-400 italic">{selected.definitions[0].example_en}</p>
                 )}
