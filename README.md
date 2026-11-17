@@ -64,3 +64,4 @@ cd src-tauri && cargo test --bins    # 单元测试
 - [tauri/README.md](tauri/README.md) —— 主 README（构建、许可、致谢、移植要点）
 - [tauri/LICENSE-DATA](tauri/LICENSE-DATA) —— 内置词典数据许可与完整署名
 - [AGENTS.md](AGENTS.md) —— 开发工作备忘（构建/验证正确姿势、踩坑记录、历史决策）
+
