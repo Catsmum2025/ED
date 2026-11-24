@@ -10,7 +10,7 @@
   - 标准版 Portable：`ED-Standard-0.1.0-Portable.zip`（约 57.2 MiB）
   - 完整版 NSIS：`ED-Full_0.1.0_x64-setup.exe`（约 63.4 MiB，内置 770,109 条 ECDICT）
   - 完整版 Portable：`ED-Full-0.1.0-Portable.zip`（约 65.6 MiB）
-  - 2026-11-17 20:22 重建（含词条文件名唯一化修复；portable 按版本分开：ED-Standard-Portable-* / ED-Full-Portable-*）：标准版解压 25,179 文件；完整版由 `ecdict.jsonl.gz` 流式导入 770,109 条记录 → 769,804 条入库（305 条字段异常跳过）、导入约 345 s、索引约 113 MB
+  - 2026-11-24 23:04 重建（弹窗可拖动 + 首次快捷键不再闪退）：标准版 56.8 MB NSIS / 60.0 MB portable；完整版 66.4 MB NSIS / 68.8 MB portable；portable 按版本分开（ED-Standard-Portable-* / ED-Full-Portable-*）
 - **运行时数据**：`%APPDATA%/com.ahpx.ed/`（settings.json、index.bin、stats.json、wordbooks.json、tts-cache/、dictionary/）；旧目录 com.ahpx.cdictionary 为历史遗留可自行删除
 
 ## 2. Git 约定
@@ -114,6 +114,8 @@ powershell -ExecutionPolicy Bypass -File .\make-portable.ps1 -Edition Full -Reso
 8. **合并 ECDICT 后的数据许可修正**（2026-11-17）：内置 `dictionary.zip` 为 open-dictionary（CC BY-SA 4.0）与 ECDICT（MIT）的合并数据，合并数据整体以 CC BY-SA 4.0 发布；新增 `tauri/LICENSE-DATA`（CC BY-SA 4.0 声明、Wiktionary/open-dictionary/wordfreq 署名、ECDICT MIT 全文与署名、修改说明）；`tauri/README.md` 与根 `README.md` 的许可章节改为代码 MIT / 数据 CC BY-SA 4.0 分列，并链接 `LICENSE-DATA`；根 README 删除“不随包分发 ECDICT 数据”的旧表述
 
 9. **双版本词库（标准版 / 完整版 ECDICT）**（2026-11-17）：完整版以 solid `ecdict.jsonl.gz`（约 50 MB / 770,109 条）随包分发，安装器新增流式 JSONL.GZ 导入（flate2，逐行解析 + 同趟建索引）；`src-tauri/tauri.conf.full.json` 为完整版构建覆盖配置（只打 jsonl.gz）；`scripts/make-ecdict-pack.mjs` 从本地 ECDICT 目录生成数据包（约 30 秒）；两个数据包都含 open-dictionary 内容，均按 CC BY-SA 4.0 发布并保留 ECDICT 的 MIT 声明（LICENSE-DATA 说明）；翻译页复制按钮加入“已复制”勾选反馈
+
+10. **弹窗修复**（2026-11-24）：自绘标题栏拖动补 core:window:allow-start-dragging（缺权限时 startDragging 的 Promise 被 catch 吞掉）；首次快捷键只闪一下的问题按“Windows 首次前台激活被拒 → 立刻收到 Focused(false)”处理：show 后 700ms 内的失焦忽略，并在 70/240ms 重试 set_focus。release 版实测：首次快捷键后弹窗保持可见、真实鼠标拖动位移 72x48 px
 
 ## 8. 已知差异 / 待办候选
 - apiKey 明文存 settings.json（Electron 用 safeStorage/DPAPI，Tauri 无等价 API；可考虑迁移到 keyring 插件）
