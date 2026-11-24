@@ -76,6 +76,7 @@ powershell -ExecutionPolicy Bypass -File .\make-portable.ps1 -Edition Full -Reso
 - **Tauri v2 配置**：`bundle.targets` 无 `portable`（只有 nsis/msi/…）；NsisConfig 无 `oneClick`/`allowToChangeInstallationDirectory`（v1 字段，deny_unknown_fields 会拒绝）
 - **Tauri 命令参数映射**：Rust snake_case ↔ JS camelCase 自动转换；JS 保留字参数写 `r#type`；async 命令带 `State<'_>` 引用参数必须返回 `Result`
 - **global-shortcut 插件**：每快捷键回调是 `on_shortcut(accel.parse::<Shortcut>()?, handler)`，不是 `register_with`；accelerator 需把 Electron 的 `CommandOrControl` 归一化为 `CmdOrCtrl`（见 windows.rs::normalize_accel）
+- **自绘标题栏拖动需要 ACL**：Tauri v2 的 `startDragging()` 走 IPC 命令，必须在 `capabilities/default.json` 加 `core:window:allow-start-dragging`；缺权限时 Promise 直接 reject，PopupFrame 里的 `.catch(() => {})` 会把它吞掉，表现为“完全拖不动”
 - **tray**：`TrayIconBuilder.menu(&menu)` 只传 menu（不传 app、无 Result）；图标用 `Image::new_owned(rgba,w,h)`（image crate 解码 png），2.12 无 `Image::from_path`
 - **chrono**：`NaiveDate` 没有 `overflowing_sub_days`，用 `checked_sub_days(Days::new(n))`
 - **杀软/索引器偶发锁定 settings.json**：save_settings 已内置 5 次×150ms 重试；写失败会 eprintln（stderr），排错时别把 stderr 重定向到 NUL
@@ -85,7 +86,7 @@ powershell -ExecutionPolicy Bypass -File .\make-portable.ps1 -Edition Full -Reso
 - **前端唯一后端入口**：`src/ipc.ts`（api 形状 = Electron preload，页面零改动）。新增能力按“Rust command → generate_handler! 注册 → ipc.ts 包装 → 组件调用”四步
 - **43 条命令分组**：settings_*（2）、dict_*（8 查询/索引 + 3 安装器）、stats_*（6）、llm_* / dict_generate_word（4）、tts_*（3）、llm_*_local_model（3）、wordbooks_*（10）、window_*（4）
 - **事件通道**：`dict:installProgress/Done/Error`、`translate:chunk/done/error`、`popup:show`、`main:navigate`
-- **窗口 label 约定**：`main` / `popup-dict` / `popup-translate`；弹窗失焦自动隐藏（main.rs 全局 on_window_event 按 label 前缀匹配）、主窗口 CloseRequested→hide（托盘退出经 QUITTING 原子标志放行）
+- **窗口 label 约定**：`main` / `popup-dict` / `popup-translate`；弹窗失焦自动隐藏（main.rs 全局 on_window_event 按 label 前缀匹配），但**显示后 700ms 内的 Focused(false) 视为焦点竞争事件忽略**（Windows 首次 SetForegroundWindow 常被拒，弹窗会“闪一下消失”）；show_popup 在 70/240ms 后重试 set_focus；主窗口 CloseRequested→hide（托盘退出经 QUITTING 原子标志放行）
 - **数据目录**：见 state.rs；resource_dir 里找 dictionary.zip / ecdict.jsonl.gz / popup-icon.png（兼容 `<rd>/`、`<rd>/resources/` 两种布局），标准版与完整版靠随包文件区分
 - **词库安装流**：installer.rs 按扩展名分流——`.zip` 走 `extract_and_build`（zip crate，无 PowerShell 依赖，可单测）；`.jsonl.gz` 走 `import_jsonl_gz`（flate2 流式逐行解析，770,109 条落成按词拆分 JSON 并同趟建索引，包体约 50 MB）→ 写 settings.dictionaryPath → dict.update_path → 建索引 → emit Done；前端 ExtractionWatcher 负责把新路径镜像进 store（勿删！曾有陈旧回写竞态导致功能回归，见 b590627）
 - **前端外壳**：`components/Nav.tsx` 左侧 fixed 竖向图标导航（全高圆角卡片、底部隔线放设置与 `/dashboard`）；`components/Layout.tsx` 用 `.app-main` 预留导航偏移，入场动画只按**一级路由**重放（/settings/* 切换只让右侧面板动，Settings.tsx 按 tab key 播动画）

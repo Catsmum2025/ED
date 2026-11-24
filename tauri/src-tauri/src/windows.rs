@@ -1,7 +1,10 @@
 //! Windows (main/popup), tray and global hotkeys - the parts of
 //! electron/main.ts that are not IPC handlers.
 
+use std::collections::HashMap;
 use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::{Mutex, OnceLock};
+use std::time::{Duration, Instant};
 
 use serde_json::{json, Value};
 use tauri::menu::{MenuBuilder, MenuItemBuilder, PredefinedMenuItem};
@@ -32,12 +35,53 @@ impl PopupKind {
     }
 }
 
+/// Timestamp of the last show for each popup. Windows refuses foreground
+/// activation when the request does not come from the foreground process, so a
+/// freshly shown popup can receive Focused(false) immediately and be hidden
+/// ("flashes then disappears"). Blur events inside a short grace window are
+/// treated as that focus race instead of the user clicking away.
+fn popup_shown_at() -> &'static Mutex<HashMap<String, Instant>> {
+    static TIMES: OnceLock<Mutex<HashMap<String, Instant>>> = OnceLock::new();
+    TIMES.get_or_init(|| Mutex::new(HashMap::new()))
+}
+
+fn mark_popup_shown(label: &str) {
+    if let Ok(mut map) = popup_shown_at().lock() {
+        map.insert(label.to_string(), Instant::now());
+    }
+}
+
+pub fn popup_blur_is_spurious(label: &str) -> bool {
+    popup_shown_at()
+        .lock()
+        .ok()
+        .and_then(|map| map.get(label).map(|t| t.elapsed() < Duration::from_millis(700)))
+        .unwrap_or(false)
+}
+
+/// Retry activation shortly after showing: the first SetForegroundWindow is
+/// often rejected while the hotkey still holds the foreground, but succeeds
+/// once the key event has been processed.
+fn focus_popup_later(w: WebviewWindow) {
+    std::thread::spawn(move || {
+        for delay in [70u64, 240] {
+            std::thread::sleep(Duration::from_millis(delay));
+            if w.is_visible().unwrap_or(false) {
+                let _ = w.set_focus();
+            }
+        }
+    });
+}
+
 /// Create-or-focus the popup window (Electron's showPopup).
 pub fn show_popup(app: &AppHandle, kind: PopupKind) {
     let label = kind.label();
+    mark_popup_shown(label);
     if let Some(w) = app.get_webview_window(label) {
+        let _ = w.unminimize();
         let _ = w.show();
         let _ = w.set_focus();
+        focus_popup_later(w.clone());
         let _ = w.emit("popup:show", ());
         return;
     }
@@ -78,6 +122,7 @@ pub fn show_popup(app: &AppHandle, kind: PopupKind) {
             }
             let _ = w.show();
             let _ = w.set_focus();
+            focus_popup_later(w.clone());
         }
         Err(err) => eprintln!("[popup] 创建失败: {}", err),
     }

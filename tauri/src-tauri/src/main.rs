@@ -45,7 +45,12 @@ fn main() {
             // Popups auto-hide when the user clicks away (Electron parity).
             if window.label().starts_with("popup-") {
                 if let WindowEvent::Focused(false) = event {
-                    let _ = window.hide();
+                    // Ignore the focus race right after showing (Windows blocks
+                    // the first foreground activation); only a real click-away
+                    // should dismiss the popup.
+                    if !windows::popup_blur_is_spurious(window.label()) {
+                        let _ = window.hide();
+                    }
                 }
             }
         })
