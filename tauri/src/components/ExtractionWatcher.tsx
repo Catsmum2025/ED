@@ -19,7 +19,13 @@ export function ExtractionWatcher() {
       // later settings save would clobber the new one back to the old value.
       if (r.path) useSettingsStore.getState().update({ dictionaryPath: r.path });
     });
-    const offE = api.dict.onInstallError((e) => setError(e.message));
+    const offE = api.dict.onInstallError((e) => {
+      setError(e.message);
+      // Errors must never be silent: if the user dismissed the progress dialog
+      // to run in the background, bring it back and surface the main window.
+      useExtractionStore.getState().showModal();
+      api.window.showMain().catch(() => {});
+    });
     return () => { offP(); offD(); offE(); };
   }, [setProgress, setDone, setError]);
 

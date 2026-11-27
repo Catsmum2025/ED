@@ -76,6 +76,10 @@ powershell -ExecutionPolicy Bypass -File .\make-portable.ps1 -Edition Full -Reso
 - **Tauri v2 配置**：`bundle.targets` 无 `portable`（只有 nsis/msi/…）；NsisConfig 无 `oneClick`/`allowToChangeInstallationDirectory`（v1 字段，deny_unknown_fields 会拒绝）
 - **Tauri 命令参数映射**：Rust snake_case ↔ JS camelCase 自动转换；JS 保留字参数写 `r#type`；async 命令带 `State<'_>` 引用参数必须返回 `Result`
 - **global-shortcut 插件**：每快捷键回调是 `on_shortcut(accel.parse::<Shortcut>()?, handler)`，不是 `register_with`；accelerator 需把 Electron 的 `CommandOrControl` 归一化为 `CmdOrCtrl`（见 windows.rs::normalize_accel）
+- **解压/卸载确认不再用 window.confirm()**：原生 confirm 是系统样式、阻塞渲染，进度弹窗只能在它关闭后才渲染（看起来“弹窗出现在进度之后”）。现改用 components/ConfirmDialog.tsx（主题化、Esc/Enter、危险操作红色），确认后才 setRunning()
+- **release 构建不再回退到开发机路径**：find_bundled_dictionary 的 CARGO_MANIFEST_DIR 回退只在 debug 编译；release 只认 resource_dir，避免把构建机路径带进安装包
+- **解压失败会写 install.log**：%APPDATA%/com.ahpx.ed/install.log，记录源路径与错误；若源包无法就地打开（网络盘/占位文件/句柄无效），先复制到 %TEMP% 再解压
+- **崩溃不再静默**：panic hook 与启动失败都会写 crash.log 并弹 MessageBox（含 WebView2 缺失提示），后台启动失败也能看到
 - **自绘标题栏拖动需要 ACL**：Tauri v2 的 `startDragging()` 走 IPC 命令，必须在 `capabilities/default.json` 加 `core:window:allow-start-dragging`；缺权限时 Promise 直接 reject，PopupFrame 里的 `.catch(() => {})` 会把它吞掉，表现为“完全拖不动”
 - **tray**：`TrayIconBuilder.menu(&menu)` 只传 menu（不传 app、无 Result）；图标用 `Image::new_owned(rgba,w,h)`（image crate 解码 png），2.12 无 `Image::from_path`
 - **chrono**：`NaiveDate` 没有 `overflowing_sub_days`，用 `checked_sub_days(Days::new(n))`
@@ -116,6 +120,8 @@ powershell -ExecutionPolicy Bypass -File .\make-portable.ps1 -Edition Full -Reso
 9. **双版本词库（标准版 / 完整版 ECDICT）**（2026-11-17）：完整版以 solid `ecdict.jsonl.gz`（约 50 MB / 770,109 条）随包分发，安装器新增流式 JSONL.GZ 导入（flate2，逐行解析 + 同趟建索引）；`src-tauri/tauri.conf.full.json` 为完整版构建覆盖配置（只打 jsonl.gz）；`scripts/make-ecdict-pack.mjs` 从本地 ECDICT 目录生成数据包（约 30 秒）；两个数据包都含 open-dictionary 内容，均按 CC BY-SA 4.0 发布并保留 ECDICT 的 MIT 声明（LICENSE-DATA 说明）；翻译页复制按钮加入“已复制”勾选反馈
 
 10. **弹窗修复**（2026-11-24）：自绘标题栏拖动补 core:window:allow-start-dragging（缺权限时 startDragging 的 Promise 被 catch 吞掉）；首次快捷键只闪一下的问题按“Windows 首次前台激活被拒 → 立刻收到 Focused(false)”处理：show 后 700ms 内的失焦忽略，并在 70/240ms 重试 set_focus。release 版实测：首次快捷键后弹窗保持可见、真实鼠标拖动位移 72x48 px
+
+11. **解压/卸载交互与静默失败修复**（2026-11-27）：window.confirm() 换成主题化 ConfirmDialog（确认后才开始进度，修复“弹窗在进度之后出现”）；后台运行出错时强制重新弹出进度/错误弹窗并唤醒主窗口；新增 window_show_main；release 去掉开发机资源回退；源包打不开时复制到 %TEMP% 重试并写 install.log；panic/启动失败写 crash.log + MessageBox
 
 ## 8. 已知差异 / 待办候选
 - apiKey 明文存 settings.json（Electron 用 safeStorage/DPAPI，Tauri 无等价 API；可考虑迁移到 keyring 插件）

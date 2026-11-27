@@ -20,8 +20,72 @@ use std::sync::Mutex;
 use state::AppState;
 use tauri::{Manager, RunEvent, WindowEvent};
 
+/// Where crash reports are appended (same data dir as settings).
+fn crash_log_path() -> Option<std::path::PathBuf> {
+    std::env::var_os("APPDATA")
+        .map(|p| std::path::PathBuf::from(p).join("com.ahpx.ed").join("crash.log"))
+}
+
+fn append_crash_log(text: &str) {
+    let Some(path) = crash_log_path() else { return };
+    if let Some(dir) = path.parent() {
+        let _ = std::fs::create_dir_all(dir);
+    }
+    if let Ok(mut f) = std::fs::OpenOptions::new().create(true).append(true).open(path) {
+        use std::io::Write;
+        let _ = writeln!(f, "[{}] {}", chrono::Local::now().format("%Y-%m-%d %H:%M:%S"), text);
+    }
+}
+
+#[cfg(windows)]
+fn message_box(text: &str) {
+    use std::ffi::OsStr;
+    use std::os::windows::ffi::OsStrExt;
+    #[link(name = "user32")]
+    extern "system" {
+        fn MessageBoxW(hwnd: *mut core::ffi::c_void, text: *const u16, caption: *const u16, flags: u32) -> i32;
+    }
+    let wide: Vec<u16> = OsStr::new(text).encode_wide().chain(Some(0)).collect();
+    let caption: Vec<u16> = OsStr::new("ED").encode_wide().chain(Some(0)).collect();
+    // MB_OK | MB_ICONERROR | MB_SETFOREGROUND
+    unsafe { MessageBoxW(std::ptr::null_mut(), wide.as_ptr(), caption.as_ptr(), 0x10 | 0x10000) };
+}
+
+#[cfg(not(windows))]
+fn message_box(text: &str) {
+    eprintln!("{}", text);
+}
+
+/// Report a fatal error in the GUI (release builds have no console) and keep a
+/// log, so a background start never dies silently.
+fn report_fatal(text: &str) {
+    append_crash_log(text);
+    message_box(text);
+}
+
+fn install_crash_hook() {
+    std::panic::set_hook(Box::new(|info| {
+        let payload = if let Some(s) = info.payload().downcast_ref::<&str>() {
+            (*s).to_string()
+        } else if let Some(s) = info.payload().downcast_ref::<String>() {
+            s.clone()
+        } else {
+            "未知错误".to_string()
+        };
+        let loc = info
+            .location()
+            .map(|l| format!("{}:{}", l.file(), l.line()))
+            .unwrap_or_default();
+        report_fatal(&format!("ED 发生未处理的错误：
+{}
+
+位置：{}", payload, loc));
+    }));
+}
+
 fn main() {
-    tauri::Builder::default()
+    install_crash_hook();
+    let app_result = tauri::Builder::default()
         .plugin(tauri_plugin_single_instance::init(|app, _argv, _cwd| {
             if let Some(w) = app.get_webview_window("main") {
                 let _ = w.unminimize();
@@ -181,13 +245,25 @@ fn main() {
             wordbooks::wordbooks_is_favorited,
             wordbooks::wordbooks_containing_word,
             windows::window_hide,
+            windows::window_show_main,
             windows::window_close,
             windows::window_switch_to_main,
             windows::window_fit_content,
         ])
-        .build(tauri::generate_context!())
-        .expect("error while building tauri application")
-        .run(|app_handle, event| {
+        .build(tauri::generate_context!());
+    let app = match app_result {
+        Ok(app) => app,
+        Err(err) => {
+            report_fatal(&format!(
+                "ED 启动失败：{}
+
+如果这是首次在新电脑上运行，请先安装 Microsoft Edge WebView2 运行时（Windows 10/11 通常自带），然后重新启动。",
+                err
+            ));
+            return;
+        }
+    };
+    app.run(|app_handle, event| {
             if let RunEvent::Exit = event {
                 // Stop any local model process we started (Electron before-quit parity).
                 if let Some(st) = app_handle.try_state::<AppState>() {

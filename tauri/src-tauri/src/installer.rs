@@ -30,10 +30,15 @@ pub fn find_bundled_dictionary() -> Option<String> {
             candidates.push(rd.join("resources").join(name));
         }
     }
-    // Dev fallback: the checkout copy next to this crate.
-    let dev = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("resources");
-    for name in BUNDLED_NAMES {
-        candidates.push(dev.join(name));
+    // Dev fallback: the checkout copy next to this crate. Never compiled into
+    // release builds - it would bake the build machine's source path into the
+    // shipped exe and can point at a stale/partial file on another machine.
+    #[cfg(debug_assertions)]
+    {
+        let dev = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("resources");
+        for name in BUNDLED_NAMES {
+            candidates.push(dev.join(name));
+        }
     }
     candidates.retain(|p| p.exists());
     candidates.into_iter().next().map(|p| p.to_string_lossy().to_string())
@@ -41,6 +46,36 @@ pub fn find_bundled_dictionary() -> Option<String> {
 
 fn is_jsonl_gz(path: &str) -> bool {
     path.to_ascii_lowercase().ends_with(".gz")
+}
+
+/// Append a line to the install diagnostics log (%APPDATA%/com.ahpx.ed/install.log).
+/// Failures on machines we cannot inspect directly are otherwise invisible.
+fn log_install(msg: &str) {
+    if let Some(appdata) = std::env::var_os("APPDATA") {
+        let dir = std::path::PathBuf::from(appdata).join("com.ahpx.ed");
+        let _ = fs::create_dir_all(&dir);
+        if let Ok(mut f) = fs::OpenOptions::new().create(true).append(true).open(dir.join("install.log")) {
+            use std::io::Write;
+            let _ = writeln!(f, "[{}] {}", chrono::Local::now().format("%Y-%m-%d %H:%M:%S"), msg);
+        }
+    }
+}
+
+/// Some Windows setups refuse to open the packaged pack in place (network /
+/// redirected / online-only files report "invalid handle"); copy it to %TEMP%
+/// first so the extractor reads a normal local file.
+fn prepare_source(path: &str) -> Result<(String, Option<std::path::PathBuf>), String> {
+    match fs::File::open(path) {
+        Ok(_) => Ok((path.to_string(), None)),
+        Err(first) => {
+            let ext = if is_jsonl_gz(path) { "gz" } else { "zip" };
+            let tmp = std::env::temp_dir().join(format!("ed-dict-src-{}.{}", std::process::id(), ext));
+            log_install(&format!("open failed: {}: {}; copying to {:?}", path, first, tmp));
+            fs::copy(path, &tmp)
+                .map_err(|e| format!("无法读取内置词库：{}（{}；复制到临时目录也失败：{}）", path, first, e))?;
+            Ok((tmp.to_string_lossy().to_string(), Some(tmp)))
+        }
+    }
 }
 
 fn count_files(dir: &std::path::Path) -> usize {
@@ -85,7 +120,7 @@ pub fn dict_install(window: WebviewWindow) -> Value {
     // streamed via dict:installProgress / dict:installDone (Electron parity).
     std::thread::spawn(move || {
         if let Err(e) = run_install(&window, &zip_path, &dest_dir) {
-            let _ = window.emit("dict:installError", json!({ "message": e }));
+            let _ = window.emit("dict:installError", json!({ "message": format!("词库安装失败：{}", e) }));
         }
     });
 
@@ -105,7 +140,7 @@ pub fn dict_import_zip(window: WebviewWindow, zip_path: String) -> Value {
     let dest_str = dest_dir.to_string_lossy().to_string();
     std::thread::spawn(move || {
         if let Err(e) = run_install(&window, &zip_path, &dest_dir) {
-            let _ = window.emit("dict:installError", json!({ "message": e }));
+            let _ = window.emit("dict:installError", json!({ "message": format!("词库安装失败：{}", e) }));
         }
     });
     json!({ "started": true, "message": "正在解压…", "path": dest_str })
@@ -180,8 +215,9 @@ pub(crate) fn extract_and_build(
     fs::create_dir_all(dest_dir).map_err(|e| e.to_string())?;
     on_progress("extract", 0, 0);
 
-    let file = fs::File::open(zip_path).map_err(|e| e.to_string())?;
-    let mut archive = ZipArchive::new(file).map_err(|e| format!("打开压缩包失败: {}", e))?;
+    let file = fs::File::open(zip_path)
+        .map_err(|e| format!("打开词库文件失败：{}（{}）", zip_path, e))?;
+    let mut archive = ZipArchive::new(file).map_err(|e| format!("打开压缩包失败：{}（{}）", zip_path, e))?;
     let prefix = common_top_dir(&archive);
     let total = archive.len();
     let mut rows: Vec<BuildEntry> = Vec::new();
@@ -298,6 +334,18 @@ pub(crate) fn extract_and_flatten(
 }
 
 pub(crate) fn run_install(window: &WebviewWindow, zip_path: &str, dest_dir: &std::path::Path) -> Result<(), String> {
+    let (source, temp) = prepare_source(zip_path)?;
+    let result = run_install_inner(window, &source, dest_dir);
+    if let Some(tmp) = temp {
+        let _ = fs::remove_file(tmp);
+    }
+    if let Err(ref e) = result {
+        log_install(&format!("install failed from {}: {}", zip_path, e));
+    }
+    result
+}
+
+fn run_install_inner(window: &WebviewWindow, zip_path: &str, dest_dir: &std::path::Path) -> Result<(), String> {
     let emit = |phase: &str, count: usize, total: usize| {
         let _ = window.emit("dict:installProgress", json!({ "phase": phase, "count": count, "total": total }));
     };

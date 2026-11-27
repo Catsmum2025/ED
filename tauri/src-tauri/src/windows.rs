@@ -230,6 +230,17 @@ pub fn window_close(window: WebviewWindow) {
     let _ = window.close();
 }
 
+/// Surface the main window (used when a background task fails while the user
+/// has hidden it to the tray, so the error is never silent).
+#[tauri::command]
+pub fn window_show_main(app: AppHandle) {
+    if let Some(main) = app.get_webview_window("main") {
+        let _ = main.show();
+        let _ = main.unminimize();
+        let _ = main.set_focus();
+    }
+}
+
 /// Hide the popup, surface the main window and ask it to navigate.
 #[tauri::command]
 pub fn window_switch_to_main(app: AppHandle, window: WebviewWindow, route: String, query: Option<Value>) {

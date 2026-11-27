@@ -5,6 +5,7 @@ import { useSettingsStore } from '../store/settings';
 import { useExtractionStore } from '../store/extraction';
 import { useExtractionBlocked } from '../components/ExtractionOverlay';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../components/Card';
+import { ConfirmDialog, type ConfirmOptions } from '../components/ConfirmDialog';
 import { Button } from '../components/Button';
 import { Input } from '../components/Input';
 import { api } from '../ipc';
@@ -18,6 +19,10 @@ export function DictionaryCacheSettings() {
   const indexing = status.indexing;
   const [busy, setBusy] = useState<null | 'uninstall'>(null);
   const [message, setMessage] = useState<{ text: string; kind: 'ok' | 'err' } | null>(null);
+  // Themed confirm dialog (window.confirm() is OS chrome and blocks rendering,
+  // which made the progress overlay appear only after the prompt went away).
+  const [confirmReq, setConfirmReq] = useState<{ opts: ConfirmOptions; action: () => void } | null>(null);
+  const ask = (opts: ConfirmOptions, action: () => void) => setConfirmReq({ opts, action });
 
   // Extraction state — drives the progress modal and disables buttons while running.
   const extractionState = useExtractionStore((s) => s.state);
@@ -72,8 +77,7 @@ export function DictionaryCacheSettings() {
     api.settings.openPath(dictionaryPath);
   };
 
-  const handleInstall = async () => {
-    if (!confirm(t('settings.dict.confirmInstall'))) return;
+  const startInstall = async () => {
     setMessage(null);
     // Trigger the install — the main process streams progress back via events.
     // The extraction store flips to 'running' immediately so the overlay shows.
@@ -81,14 +85,24 @@ export function DictionaryCacheSettings() {
     try {
       await api.dict.install();
     } catch (err: any) {
+      useExtractionStore.getState().reset();
       setMessage({ text: err?.message || t('settings.dict.extractionFailed'), kind: 'err' });
     }
   };
 
-  const handleImportZip = async () => {
-    const zipPath = await api.settings.pickZipFile();
-    if (!zipPath) return;
-    if (!confirm(t('settings.dict.confirmImport', { path: zipPath }))) return;
+  const handleInstall = () => {
+    setMessage(null);
+    ask(
+      {
+        title: t('settings.dict.installTitle'),
+        body: t('settings.dict.confirmInstall'),
+        confirmLabel: t('settings.dict.installNow'),
+      },
+      () => { void startInstall(); },
+    );
+  };
+
+  const startImport = async (zipPath: string) => {
     setMessage(null);
     setRunning();
     try {
@@ -103,8 +117,20 @@ export function DictionaryCacheSettings() {
     }
   };
 
-  const handleUninstall = async () => {
-    if (!confirm(t('settings.dict.confirmUninstall'))) return;
+  const handleImportZip = async () => {
+    const zipPath = await api.settings.pickZipFile();
+    if (!zipPath) return;
+    ask(
+      {
+        title: t('settings.dict.importTitle'),
+        body: t('settings.dict.confirmImport', { path: zipPath }),
+        confirmLabel: t('settings.dict.importNow'),
+      },
+      () => { void startImport(zipPath); },
+    );
+  };
+
+  const runUninstall = async () => {
     setBusy('uninstall');
     setMessage(null);
     try {
@@ -121,6 +147,19 @@ export function DictionaryCacheSettings() {
     } finally {
       setBusy(null);
     }
+  };
+
+  const handleUninstall = () => {
+    setMessage(null);
+    ask(
+      {
+        title: t('settings.dict.uninstallTitle'),
+        body: t('settings.dict.confirmUninstall'),
+        confirmLabel: t('settings.dict.uninstallNow'),
+        danger: true,
+      },
+      () => { void runUninstall(); },
+    );
   };
 
   return (
@@ -197,6 +236,17 @@ export function DictionaryCacheSettings() {
       </Card>
 
       <WordManager />
+
+      <ConfirmDialog
+        open={confirmReq !== null}
+        {...(confirmReq?.opts ?? { title: '' })}
+        onConfirm={() => {
+          const action = confirmReq?.action;
+          setConfirmReq(null);
+          action?.();
+        }}
+        onCancel={() => setConfirmReq(null)}
+      />
     </div>
   );
 }

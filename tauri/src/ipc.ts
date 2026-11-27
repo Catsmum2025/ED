@@ -211,6 +211,7 @@ const translateApi = {
 const windowApi = {
   hide: (): Promise<void> => invoke('window_hide'),
   close: (): Promise<void> => invoke('window_close'),
+  showMain: (): Promise<void> => invoke('window_show_main'),
   switchToMain: (route: string, query?: Record<string, string>): Promise<void> =>
     invoke('window_switch_to_main', { route, query }),
   fitContent: (height: number): Promise<void> => invoke('window_fit_content', { height }),
