@@ -73,8 +73,14 @@ export function DictionaryCacheSettings() {
     }
   };
 
-  const handleOpen = () => {
-    api.settings.openPath(dictionaryPath);
+  const handleOpen = async () => {
+    if (!dictionaryPath) return;
+    setMessage(null);
+    try {
+      await api.settings.openPath(dictionaryPath);
+    } catch (err: any) {
+      setMessage({ text: err?.message || t('settings.dict.openFailed'), kind: 'err' });
+    }
   };
 
   const startInstall = async () => {

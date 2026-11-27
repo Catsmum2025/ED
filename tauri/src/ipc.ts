@@ -8,7 +8,7 @@
  */
 import { invoke, convertFileSrc } from '@tauri-apps/api/core';
 import { listen, type UnlistenFn } from '@tauri-apps/api/event';
-import { openPath as shellOpenPath, openUrl as shellOpenUrl } from '@tauri-apps/plugin-opener';
+import { openUrl as shellOpenUrl } from '@tauri-apps/plugin-opener';
 import { open as dialogOpen, save as dialogSave } from '@tauri-apps/plugin-dialog';
 import type {
   AppSettings,
@@ -68,7 +68,9 @@ const settingsApi = {
     await shellOpenUrl(url);
   },
   openPath: async (path: string): Promise<void> => {
-    await shellOpenPath(path);
+    // Dedicated Rust command: the opener plugin's open_path is ACL-scoped and
+    // silently failed on the dictionary folder.
+    await invoke('open_in_explorer', { path });
   },
 };
 

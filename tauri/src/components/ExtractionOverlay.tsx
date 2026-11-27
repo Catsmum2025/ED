@@ -38,7 +38,7 @@ export function ExtractionOverlay() {
     : 0;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm animate-fade-in">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/35 animate-fade-in">
       <div className="w-[420px] max-w-[92vw] rounded-2xl bg-white dark:bg-slate-900 shadow-hover border border-slate-200/60 dark:border-slate-800 p-5">
         <div className="flex items-start gap-3">
           {state === 'running' && (

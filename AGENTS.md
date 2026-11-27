@@ -10,7 +10,7 @@
   - 标准版 Portable：`ED-Standard-0.1.0-Portable.zip`（约 57.2 MiB）
   - 完整版 NSIS：`ED-Full_0.1.0_x64-setup.exe`（约 63.4 MiB，内置 770,109 条 ECDICT）
   - 完整版 Portable：`ED-Full-0.1.0-Portable.zip`（约 65.6 MiB）
-  - 2026-11-27 21:41 重建（主题化解压/卸载确认框、后台失败必提示、crash.log/install.log、资源回退修复）：标准版 56.8 MB NSIS / 60.0 MB portable；完整版 66.4 MB NSIS / 68.8 MB portable；portable 按版本分开（ED-Standard-Portable-* / ED-Full-Portable-*）
+  - 2026-11-27 22:48 重建（上一行全部内容 + 去掉模态背景毛玻璃 + 资源管理器显示改为原生 explorer.exe）：标准版 56.9 MB NSIS / 60.0 MB portable；完整版 66.4 MB NSIS / 68.8 MB portable；portable 按版本分开（ED-Standard-Portable-* / ED-Full-Portable-*）
 - **运行时数据**：`%APPDATA%/com.ahpx.ed/`（settings.json、index.bin、stats.json、wordbooks.json、tts-cache/、dictionary/）；旧目录 com.ahpx.cdictionary 为历史遗留可自行删除
 
 ## 2. Git 约定
@@ -79,6 +79,8 @@ powershell -ExecutionPolicy Bypass -File .\make-portable.ps1 -Edition Full -Reso
 - **解压/卸载确认不再用 window.confirm()**：原生 confirm 是系统样式、阻塞渲染，进度弹窗只能在它关闭后才渲染（看起来“弹窗出现在进度之后”）。现改用 components/ConfirmDialog.tsx（主题化、Esc/Enter、危险操作红色），确认后才 setRunning()
 - **release 构建不再回退到开发机路径**：find_bundled_dictionary 的 CARGO_MANIFEST_DIR 回退只在 debug 编译；release 只认 resource_dir，避免把构建机路径带进安装包
 - **解压失败会写 install.log**：%APPDATA%/com.ahpx.ed/install.log，记录源路径与错误；若源包无法就地打开（网络盘/占位文件/句柄无效），先复制到 %TEMP% 再解压
+- **“在资源管理器中显示”不要用 opener 插件**：plugin-opener 的 open_path 受 ACL/作用域限制，对词典目录静默失败；改用 windows.rs::open_in_explorer（explorer.exe 直接打开，目录不存在先创建，错误会回传界面）
+- **模态背景不做毛玻璃**：ConfirmDialog / ExtractionOverlay 只保留半透明遮罩（bg-slate-900/35），去掉 backdrop-blur，避免整页发虚
 - **崩溃不再静默**：panic hook 与启动失败都会写 crash.log 并弹 MessageBox（含 WebView2 缺失提示），后台启动失败也能看到
 - **自绘标题栏拖动需要 ACL**：Tauri v2 的 `startDragging()` 走 IPC 命令，必须在 `capabilities/default.json` 加 `core:window:allow-start-dragging`；缺权限时 Promise 直接 reject，PopupFrame 里的 `.catch(() => {})` 会把它吞掉，表现为“完全拖不动”
 - **tray**：`TrayIconBuilder.menu(&menu)` 只传 menu（不传 app、无 Result）；图标用 `Image::new_owned(rgba,w,h)`（image crate 解码 png），2.12 无 `Image::from_path`
@@ -122,6 +124,8 @@ powershell -ExecutionPolicy Bypass -File .\make-portable.ps1 -Edition Full -Reso
 10. **弹窗修复**（2026-11-24）：自绘标题栏拖动补 core:window:allow-start-dragging（缺权限时 startDragging 的 Promise 被 catch 吞掉）；首次快捷键只闪一下的问题按“Windows 首次前台激活被拒 → 立刻收到 Focused(false)”处理：show 后 700ms 内的失焦忽略，并在 70/240ms 重试 set_focus。release 版实测：首次快捷键后弹窗保持可见、真实鼠标拖动位移 72x48 px
 
 11. **解压/卸载交互与静默失败修复**（2026-11-27）：window.confirm() 换成主题化 ConfirmDialog（确认后才开始进度，修复“弹窗在进度之后出现”）；后台运行出错时强制重新弹出进度/错误弹窗并唤醒主窗口；新增 window_show_main；release 去掉开发机资源回退；源包打不开时复制到 %TEMP% 重试并写 install.log；panic/启动失败写 crash.log + MessageBox
+
+12. **资源管理器与对话框细节**（2026-11-27）：去掉确认框/进度框的 backdrop-blur；“在资源管理器中显示”改走原生 explorer.exe（opener 插件的 open_path 静默失败），目录不存在时先创建，失败回传错误提示
 
 ## 8. 已知差异 / 待办候选
 - apiKey 明文存 settings.json（Electron 用 safeStorage/DPAPI，Tauri 无等价 API；可考虑迁移到 keyring 插件）

@@ -246,6 +246,7 @@ fn main() {
             wordbooks::wordbooks_containing_word,
             windows::window_hide,
             windows::window_show_main,
+            windows::open_in_explorer,
             windows::window_close,
             windows::window_switch_to_main,
             windows::window_fit_content,

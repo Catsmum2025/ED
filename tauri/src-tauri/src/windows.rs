@@ -242,6 +242,37 @@ pub fn window_show_main(app: AppHandle) {
 }
 
 /// Hide the popup, surface the main window and ask it to navigate.
+/// Open a folder in Windows Explorer. The opener plugin's open_path command is
+/// ACL-scoped and failed silently for the dictionary directory, so this uses
+/// Explorer directly (creating the directory first if it does not exist).
+#[tauri::command]
+pub fn open_in_explorer(path: String) -> Result<(), String> {
+    let trimmed = path.trim();
+    if trimmed.is_empty() {
+        return Err("词库目录为空".to_string());
+    }
+    let p = std::path::PathBuf::from(trimmed);
+    if !p.exists() {
+        std::fs::create_dir_all(&p).map_err(|e| format!("创建目录失败：{}", e))?;
+    }
+    #[cfg(target_os = "windows")]
+    {
+        use std::os::windows::process::CommandExt;
+        // CREATE_NO_WINDOW keeps explorer.exe from flashing a console.
+        std::process::Command::new("explorer.exe")
+            .arg(&p)
+            .creation_flags(0x0800_0000)
+            .spawn()
+            .map_err(|e| format!("打开资源管理器失败：{}", e))?;
+        return Ok(());
+    }
+    #[cfg(not(target_os = "windows"))]
+    {
+        let _ = p;
+        Err("当前平台暂不支持".to_string())
+    }
+}
+
 #[tauri::command]
 pub fn window_switch_to_main(app: AppHandle, window: WebviewWindow, route: String, query: Option<Value>) {
     let _ = window.hide();
