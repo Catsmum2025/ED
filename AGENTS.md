@@ -10,7 +10,7 @@
   - 标准版 Portable：`ED-Standard-0.1.0-Portable.zip`（约 57.2 MiB）
   - 完整版 NSIS：`ED-Full_0.1.0_x64-setup.exe`（约 63.4 MiB，内置 770,109 条 ECDICT）
   - 完整版 Portable：`ED-Full-0.1.0-Portable.zip`（约 65.6 MiB）
-  - 2026-11-24 23:04 重建（弹窗可拖动 + 首次快捷键不再闪退）：标准版 56.8 MB NSIS / 60.0 MB portable；完整版 66.4 MB NSIS / 68.8 MB portable；portable 按版本分开（ED-Standard-Portable-* / ED-Full-Portable-*）
+  - 2026-11-27 21:41 重建（主题化解压/卸载确认框、后台失败必提示、crash.log/install.log、资源回退修复）：标准版 56.8 MB NSIS / 60.0 MB portable；完整版 66.4 MB NSIS / 68.8 MB portable；portable 按版本分开（ED-Standard-Portable-* / ED-Full-Portable-*）
 - **运行时数据**：`%APPDATA%/com.ahpx.ed/`（settings.json、index.bin、stats.json、wordbooks.json、tts-cache/、dictionary/）；旧目录 com.ahpx.cdictionary 为历史遗留可自行删除
 
 ## 2. Git 约定
